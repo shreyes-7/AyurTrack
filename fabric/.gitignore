@@ -2,17 +2,26 @@
 # Hyperledger Fabric
 # =====================
 
-# Crypto material
+# Crypto material and keystores (do NOT push private keys)
+fabric/network/crypto-config/
+fabric/network/crypto-config/**/keystore/*
 organizations/**/msp/
 organizations/**/tls/
-**/crypto-config/**
+**/*_sk
+**/keystore/**
 
 # Fabric wallets
 **/wallet/**
 
-# Private keys
-**/*_sk
-**/keystore/**
+# Fabric network artifacts
+fabric/network/*.tar.gz
+fabric/network/docker-compose*.yaml
+fabric/fabric-samples/test-network/organizations/
+fabric/fabric-samples/test-network/*.tar.gz
+fabric/fabric-samples/test-network/docker-compose*.yaml
+
+# Ignore embedded git repo inside fabric-samples
+fabric/fabric-samples/.git/
 
 # =====================
 # Node.js
