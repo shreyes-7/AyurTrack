@@ -1,2 +1,54 @@
+# =====================
+# Hyperledger Fabric
+# =====================
+
+# Crypto material and keystores (do NOT push private keys)
+fabric/network/crypto-config/
+fabric/network/crypto-config/**/keystore/*
+organizations/**/msp/
+organizations/**/tls/
+**/*_sk
+**/keystore/**
+
+# Fabric wallets
+**/wallet/**
+
+# Fabric network artifacts
+fabric/network/*.tar.gz
+fabric/network/docker-compose*.yaml
+fabric/fabric-samples/test-network/organizations/
+fabric/fabric-samples/test-network/*.tar.gz
+fabric/fabric-samples/test-network/docker-compose*.yaml
+
+# Ignore embedded git repo inside fabric-samples
 fabric/fabric-samples/.git/
+
+# =====================
+# Node.js
+# =====================
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# =====================
+# Logs & temp files
+# =====================
+*.log
+*.tmp
+*.tar
+*.tar.gz
+*.gz
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code / editor folders
+.vscode/
+.idea/
+
+# Build artifacts (if any)
+dist/
+build/
+out/
 fabric.tar.gz
