@@ -40,7 +40,50 @@ Make sure your system has the following installed:
   Follow official [Fabric setup guide](https://hyperledger-fabric.readthedocs.io/en/latest/install.html)
 
 ---
+1️⃣ Install System Prerequisites
 
+Update & install packages
+```
+sudo apt update && sudo apt upgrade -y
+sudo apt install curl wget git docker.io docker-compose nodejs npm jq -y
+sudo apt install build-essential libnss3 libnspr4 libatk1.0-0 libxss1 libgtk-3-0 -y
+
+```
+Start Docker and enable on boot
+```
+sudo systemctl start docker
+sudo systemctl enable docker
+
+```
+Add your user to Docker group
+```
+sudo usermod -aG docker $USER
+newgrp docker
+
+```
+Verify installations
+```
+docker --version
+docker-compose --version
+node -v
+npm -v
+git --version
+```
+2️⃣ Install Hyperledger Fabric Binaries
+# Move to your AyurTrack folder
+```
+cd ~/AyurTrack/fabric
+
+# Download Fabric binaries and Docker images
+curl -sSL https://bit.ly/HyperledgerFabricInstall | bash -s
+
+```
+This downloads peer, orderer, configtxgen, fabric-ca-client, and docker images.
+
+Verify installation:
+```
+peer version
+```
 ## Project Structure
 
 ```text
