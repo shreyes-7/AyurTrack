@@ -1,0 +1,227 @@
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: OrdererMSP
+    MSPDir: crypto-config/ordererOrganizations/example.com/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('OrdererMSP.member')"
+        Writers:
+            Type: Signature
+            Rule: "OR('OrdererMSP.member')"
+        Admins:
+            Type: Signature
+            Rule: "OR('OrdererMSP.admin')"
+    OrdererEndpoints:
+        - orderer.example.com:7050
+
+  - &FarmersOrg
+    Name: FarmersOrg
+    ID: FarmersMSP
+    MSPDir: crypto-config/peerOrganizations/farmers.example.com/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('FarmersMSP.admin', 'FarmersMSP.peer', 'FarmersMSP.client')"
+        Writers:
+            Type: Signature
+            Rule: "OR('FarmersMSP.admin', 'FarmersMSP.client')"
+        Admins:
+            Type: Signature
+            Rule: "OR('FarmersMSP.admin')"
+        Endorsement:
+            Type: Signature
+            Rule: "OR('FarmersMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.farmers.example.com
+        Port: 7051
+
+  - &CollectorsOrg
+    Name: CollectorsOrg
+    ID: CollectorsMSP
+    MSPDir: crypto-config/peerOrganizations/collectors.example.com/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('CollectorsMSP.admin', 'CollectorsMSP.peer', 'CollectorsMSP.client')"
+        Writers:
+            Type: Signature
+            Rule: "OR('CollectorsMSP.admin', 'CollectorsMSP.client')"
+        Admins:
+            Type: Signature
+            Rule: "OR('CollectorsMSP.admin')"
+        Endorsement:
+            Type: Signature
+            Rule: "OR('CollectorsMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.collectors.example.com
+        Port: 9051
+
+  - &LabsOrg
+    Name: LabsOrg
+    ID: LabsMSP
+    MSPDir: crypto-config/peerOrganizations/labs.example.com/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('LabsMSP.admin', 'LabsMSP.peer', 'LabsMSP.client')"
+        Writers:
+            Type: Signature
+            Rule: "OR('LabsMSP.admin', 'LabsMSP.client')"
+        Admins:
+            Type: Signature
+            Rule: "OR('LabsMSP.admin')"
+        Endorsement:
+            Type: Signature
+            Rule: "OR('LabsMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.labs.example.com
+        Port: 11051
+
+  - &ProcessorsOrg
+    Name: ProcessorsOrg
+    ID: ProcessorsMSP
+    MSPDir: crypto-config/peerOrganizations/processors.example.com/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('ProcessorsMSP.admin', 'ProcessorsMSP.peer', 'ProcessorsMSP.client')"
+        Writers:
+            Type: Signature
+            Rule: "OR('ProcessorsMSP.admin', 'ProcessorsMSP.client')"
+        Admins:
+            Type: Signature
+            Rule: "OR('ProcessorsMSP.admin')"
+        Endorsement:
+            Type: Signature
+            Rule: "OR('ProcessorsMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.processors.example.com
+        Port: 13051
+
+  - &ManufacturersOrg
+    Name: ManufacturersOrg
+    ID: ManufacturersMSP
+    MSPDir: crypto-config/peerOrganizations/manufacturers.example.com/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('ManufacturersMSP.admin', 'ManufacturersMSP.peer', 'ManufacturersMSP.client')"
+        Writers:
+            Type: Signature
+            Rule: "OR('ManufacturersMSP.admin', 'ManufacturersMSP.client')"
+        Admins:
+            Type: Signature
+            Rule: "OR('ManufacturersMSP.admin')"
+        Endorsement:
+            Type: Signature
+            Rule: "OR('ManufacturersMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.manufacturers.example.com
+        Port: 15051
+
+Capabilities:
+    Channel: &ChannelCapabilities
+        V2_0: true
+    Orderer: &OrdererCapabilities
+        V2_0: true
+    Application: &ApplicationCapabilities
+        V2_0: true
+
+Application: &ApplicationDefaults
+    Organizations:
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        LifecycleEndorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+        Endorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+    Capabilities:
+        <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+    OrdererType: etcdraft
+    Addresses:
+        - orderer.example.com:7050
+    EtcdRaft:
+        Consenters:
+        - Host: orderer.example.com
+          Port: 7050
+          ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+          ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+    BatchTimeout: 2s
+    BatchSize:
+        MaxMessageCount: 10
+        AbsoluteMaxBytes: 99 MB
+        PreferredMaxBytes: 512 KB
+    Organizations:
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        BlockValidation:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+    Capabilities:
+        <<: *ChannelCapabilities
+
+Profiles:
+    AyurTrackOrdererGenesis:
+        <<: *ChannelDefaults
+        Orderer:
+            <<: *OrdererDefaults
+            Organizations:
+                - *OrdererOrg
+            Capabilities:
+                <<: *OrdererCapabilities
+        Consortiums:
+            AyurTrackConsortium:
+                Organizations:
+                    - *FarmersOrg
+                    - *CollectorsOrg
+                    - *LabsOrg
+                    - *ProcessorsOrg
+                    - *ManufacturersOrg
+
+    AyurTrackChannel:
+        Consortium: AyurTrackConsortium
+        <<: *ChannelDefaults
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *FarmersOrg
+                - *CollectorsOrg
+                - *LabsOrg
+                - *ProcessorsOrg
+                - *ManufacturersOrg
+            Capabilities:
+                <<: *ApplicationCapabilities

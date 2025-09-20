@@ -1,0 +1,41 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: example.com
+    Specs:
+      - Hostname: orderer
+
+PeerOrgs:
+  - Name: Farmers
+    Domain: farmers.example.com
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: Collectors
+    Domain: collectors.example.com
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: Labs
+    Domain: labs.example.com
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: Processors
+    Domain: processors.example.com
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: Manufacturers
+    Domain: manufacturers.example.com
+    Template:
+      Count: 1
+    Users:
+      Count: 1

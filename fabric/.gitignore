@@ -1,0 +1,44 @@
+# =====================
+# Hyperledger Fabric
+# =====================
+
+# Crypto material
+organizations/**/msp/
+organizations/**/tls/
+**/crypto-config/**
+
+# Fabric wallets
+**/wallet/**
+
+# Private keys
+**/*_sk
+**/keystore/**
+
+# =====================
+# Node.js
+# =====================
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# =====================
+# Logs & temp files
+# =====================
+*.log
+*.tmp
+*.tar
+*.tar.gz
+*.gz
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code / editor folders
+.vscode/
+.idea/
+
+# Build artifacts (if any)
+dist/
+build/
+out/

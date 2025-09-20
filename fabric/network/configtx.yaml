@@ -1,0 +1,210 @@
+Organizations:
+
+  - &OrdererOrg
+    Name: OrdererMSP
+    ID: OrdererMSP
+    MSPDir: crypto-config/ordererOrganizations/example.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+
+  - &FarmerOrg
+    Name: FarmerMSP
+    ID: FarmerMSP
+    MSPDir: crypto-config/peerOrganizations/farmer.example.com/msp
+    AnchorPeers:
+      - Host: peer0.farmer.example.com
+        Port: 7051
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('FarmerMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('FarmerMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('FarmerMSP.admin')"
+
+  - &ProcessorOrg
+    Name: ProcessorMSP
+    ID: ProcessorMSP
+    MSPDir: crypto-config/peerOrganizations/processor.example.com/msp
+    AnchorPeers:
+      - Host: peer0.processor.example.com
+        Port: 8051
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('ProcessorMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('ProcessorMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('ProcessorMSP.admin')"
+
+  - &CollectorOrg
+    Name: CollectorMSP
+    ID: CollectorMSP
+    MSPDir: crypto-config/peerOrganizations/collector.example.com/msp
+    AnchorPeers:
+      - Host: peer0.collector.example.com
+        Port: 9051
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('CollectorMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('CollectorMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('CollectorMSP.admin')"
+
+  - &LabOrg
+    Name: LabMSP
+    ID: LabMSP
+    MSPDir: crypto-config/peerOrganizations/lab.example.com/msp
+    AnchorPeers:
+      - Host: peer0.lab.example.com
+        Port: 10051
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('LabMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('LabMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('LabMSP.admin')"
+
+  - &ManufacturerOrg
+    Name: ManufacturerMSP
+    ID: ManufacturerMSP
+    MSPDir: crypto-config/peerOrganizations/manufacturer.example.com/msp
+    AnchorPeers:
+      - Host: peer0.manufacturer.example.com
+        Port: 11051
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.admin')"
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  EtcdRaft:
+    Consenters:
+      - Host: orderer.example.com
+        Port: 7050
+        ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+  Addresses:
+    - orderer.example.com:7050
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+  Capabilities:
+    <<: *OrdererCapabilities
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+
+  AyurGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+    Consortiums:
+      AyurConsortium:
+        Organizations:
+          - *FarmerOrg
+          - *ProcessorOrg
+          - *CollectorOrg
+          - *LabOrg
+          - *ManufacturerOrg
+
+  AyurChannel:
+    <<: *ChannelDefaults
+    Consortium: AyurConsortium
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *FarmerOrg
+        - *ProcessorOrg
+        - *CollectorOrg
+        - *LabOrg
+        - *ManufacturerOrg
+      Capabilities:
+        <<: *ApplicationCapabilities
+      Policies:
+        Readers:
+          Type: ImplicitMeta
+          Rule: "ANY Readers"
+        Writers:
+          Type: ImplicitMeta
+          Rule: "ANY Writers"
+        Admins:
+          Type: ImplicitMeta
+          Rule: "MAJORITY Admins"

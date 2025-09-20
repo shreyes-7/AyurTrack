@@ -1,0 +1,118 @@
+version: '2'
+
+services:
+
+  ca_orderer:
+    image: hyperledger/fabric-ca:1.5
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-orderer
+      - FABRIC_CA_SERVER_TLS_ENABLED=false
+    ports:
+      - "7054:7054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw'
+    volumes:
+      - ./crypto-config/ca-orderer:/etc/hyperledger/fabric-ca-server
+
+  orderer.example.com:
+    image: hyperledger/fabric-orderer:2.4
+    environment:
+      - ORDERER_GENERAL_LOGLEVEL=info
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererOrgMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    ports:
+      - 7050:7050
+    volumes:
+      - ./channel-artifacts:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/:/var/hyperledger/orderer/tls
+
+# Peer0 FarmerOrg
+  peer0.farmer.example.com:
+    image: hyperledger/fabric-peer:2.4
+    environment:
+      - CORE_PEER_ID=peer0.farmer.example.com
+      - CORE_PEER_ADDRESS=peer0.farmer.example.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.farmer.example.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.farmer.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.farmer.example.com:7051
+      - CORE_PEER_LOCALMSPID=FarmerOrgMSP
+    ports:
+      - 7051:7051
+    volumes:
+      - ./crypto-config/peerOrganizations/farmer.example.com/peers/peer0.farmer.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/farmer.example.com/peers/peer0.farmer.example.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.farmer.example.com:/var/hyperledger/production
+
+# Peer0 CollectorOrg
+  peer0.collector.example.com:
+    image: hyperledger/fabric-peer:2.4
+    environment:
+      - CORE_PEER_ID=peer0.collector.example.com
+      - CORE_PEER_ADDRESS=peer0.collector.example.com:9051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.collector.example.com:9051
+      - CORE_PEER_LOCALMSPID=CollectorOrgMSP
+    ports:
+      - 9051:9051
+    volumes:
+      - ./crypto-config/peerOrganizations/collector.example.com/peers/peer0.collector.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/collector.example.com/peers/peer0.collector.example.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.collector.example.com:/var/hyperledger/production
+
+# Peer0 ProcessorOrg
+  peer0.processor.example.com:
+    image: hyperledger/fabric-peer:2.4
+    environment:
+      - CORE_PEER_ID=peer0.processor.example.com
+      - CORE_PEER_ADDRESS=peer0.processor.example.com:11051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.processor.example.com:11051
+      - CORE_PEER_LOCALMSPID=ProcessorOrgMSP
+    ports:
+      - 11051:11051
+    volumes:
+      - ./crypto-config/peerOrganizations/processor.example.com/peers/peer0.processor.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/processor.example.com/peers/peer0.processor.example.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.processor.example.com:/var/hyperledger/production
+
+# Peer0 LabOrg
+  peer0.lab.example.com:
+    image: hyperledger/fabric-peer:2.4
+    environment:
+      - CORE_PEER_ID=peer0.lab.example.com
+      - CORE_PEER_ADDRESS=peer0.lab.example.com:13051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.lab.example.com:13051
+      - CORE_PEER_LOCALMSPID=LabOrgMSP
+    ports:
+      - 13051:13051
+    volumes:
+      - ./crypto-config/peerOrganizations/lab.example.com/peers/peer0.lab.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/lab.example.com/peers/peer0.lab.example.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.lab.example.com:/var/hyperledger/production
+
+# Peer0 ManufacturerOrg
+  peer0.manufacturer.example.com:
+    image: hyperledger/fabric-peer:2.4
+    environment:
+      - CORE_PEER_ID=peer0.manufacturer.example.com
+      - CORE_PEER_ADDRESS=peer0.manufacturer.example.com:15051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.manufacturer.example.com:15051
+      - CORE_PEER_LOCALMSPID=ManufacturerOrgMSP
+    ports:
+      - 15051:15051
+    volumes:
+      - ./crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.manufacturer.example.com:/var/hyperledger/production
+
+volumes:
+  peer0.farmer.example.com:
+  peer0.collector.example.com:
+  peer0.processor.example.com:
+  peer0.lab.example.com:
+  peer0.manufacturer.example.com:
