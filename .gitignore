@@ -52,3 +52,10 @@ dist/
 build/
 out/
 fabric.tar.gz
+
+# =====================
+# Node.js (frontend only)
+# =====================
+frontend/node_modules/
+frontend/npm-debug.log*
+frontend/package-lock.json
