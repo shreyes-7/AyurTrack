@@ -1,7 +1,7 @@
 // src/Pages/NotFound.jsx
 import React from "react";
 import { Link } from "react-router-dom";
-import Layout from "../components/Layout";
+import Layout from "../Components/Layout";
 
 export default function NotFound() {
   return (

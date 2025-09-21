@@ -5,8 +5,12 @@ import { motion } from "framer-motion";
 import { Leaf, Package, Clock, Activity } from "lucide-react";
 
 export default function Dashboard() {
-  const cols = JSON.parse(localStorage.getItem("ayurtrace:collections") || "[]");
-  const batches = JSON.parse(localStorage.getItem("ayurtrace:processing") || "[]");
+  const cols = JSON.parse(
+    localStorage.getItem("ayurtrace:collections") || "[]"
+  );
+  const batches = JSON.parse(
+    localStorage.getItem("ayurtrace:processing") || "[]"
+  );
   const queue = JSON.parse(localStorage.getItem("ayurtrace:queue") || "[]");
 
   const stats = [
@@ -45,7 +49,9 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm text-gray-400">{s.label}</div>
-                  <div className="text-3xl font-bold text-white mt-1">{s.value}</div>
+                  <div className="text-3xl font-bold text-white mt-1">
+                    {s.value}
+                  </div>
                 </div>
                 <div
                   className={`p-3 rounded-xl bg-gradient-to-r ${s.color} bg-opacity-20`}
