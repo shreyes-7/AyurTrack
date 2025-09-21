@@ -12,7 +12,7 @@ import {
   Settings,
   Sun,
   Moon,
-  Loader2,
+  Shield,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 
@@ -45,37 +45,48 @@ const navItems = [
     path: "/settings",
     icon: <Settings className="w-5 h-5" />,
   },
+  {
+    name: "Admin",
+    path: "/admin",
+    icon: <Shield className="w-5 h-5" />,
+  },
 ];
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
   const { dark, setDark } = useApp();
   const location = useLocation();
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
-  const handleNavigation = () => {
-    setIsNavigating(true);
-    setIsMobileMenuOpen(false);
-
-    // Reset loading state after a short delay to show the loader
-    setTimeout(() => {
-      setIsNavigating(false);
-    }, 500);
-  };
   return (
     <>
       <nav className="sticky top-0 z-50 bg-black/70 backdrop-blur-lg border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-green-400 font-bold text-xl"
-          >
-            <Leaf className="w-6 h-6" />
-            AyurTrack
-          </Link>
+          {/* Left section: Hamburger + Logo */}
+          <div className="flex items-center gap-4">
+            {/* Hamburger button (always visible, now left) */}
+            <button
+              onClick={toggleMobileMenu}
+              className="p-2 text-gray-300 hover:text-green-400 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+
+            {/* Logo */}
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-green-400 font-bold text-xl"
+            >
+              <Leaf className="w-6 h-6" />
+              AyurTrack
+            </Link>
+          </div>
 
           {/* Desktop Nav links */}
           <div className="hidden md:flex gap-6">
@@ -93,25 +104,12 @@ export default function Navbar() {
               </NavLink>
             ))}
           </div>
-
-          {/* Mobile hamburger button */}
-          <button
-            onClick={toggleMobileMenu}
-            className="md:hidden p-2 text-gray-300 hover:text-green-400 transition-colors"
-            aria-label="Toggle mobile menu"
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-40">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
@@ -124,7 +122,7 @@ export default function Navbar() {
               {/* App Title */}
               <div className="mb-6">
                 <h1 className="text-2xl font-extrabold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-                  AyurTrace
+                  AyurTrack
                 </h1>
                 <p className="text-xs text-gray-400">Botanical Traceability</p>
               </div>
@@ -137,7 +135,7 @@ export default function Navbar() {
                     <NavLink
                       key={i}
                       to={item.path}
-                      onClick={handleNavigation}
+                      onClick={toggleMobileMenu}
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition ${
                         isActive
                           ? "bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-md"
@@ -164,16 +162,6 @@ export default function Navbar() {
                 Toggle {dark ? "Light" : "Dark"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Navigation Loading Overlay */}
-      {isNavigating && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-gray-900 rounded-lg p-6 flex flex-col items-center gap-3 border border-gray-700">
-            <Loader2 className="w-8 h-8 text-green-400 animate-spin" />
-            <p className="text-sm text-gray-300">Loading page...</p>
           </div>
         </div>
       )}

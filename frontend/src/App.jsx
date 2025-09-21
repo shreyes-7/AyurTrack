@@ -13,6 +13,7 @@ const BatchLabel = lazy(() => import("./Pages/BatchLabel"));
 const ConsumerPortal = lazy(() => import("./Pages/ConsumerPortal"));
 const Settings = lazy(() => import("./Pages/Settings"));
 const NotFound = lazy(() => import("./Pages/NotFound"));
+const AdminDashboard = lazy(() => import("./Pages/AdminDashboard"));
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/batch" element={<BatchLabel />} />
             <Route path="/consumer" element={<ConsumerPortal />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="*" element={<NotFound />} />
 
           </Routes>
