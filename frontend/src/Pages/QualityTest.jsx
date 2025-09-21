@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiEndpoints } from "../services/api";
 import { useSubmit } from "../hooks/useFetch";
-import { ButtonLoader } from "../components/Loader";
+import { ButtonLoader } from "../Components/Loader";
 import Layout from "../Components/Layout";
 
 export default function LabForm() {
