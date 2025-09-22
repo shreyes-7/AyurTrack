@@ -54,64 +54,61 @@ class HerbService {
         }
     }
 
-// src/services/herb.service.js - Fixed getAllHerbs method
-static async getAllHerbs(filter = {}, options = {}) {
-    console.log('Getting all herb master records from MongoDB with filter:', filter);
+    static async getAllHerbs(filter = {}) {
+        console.log('Getting all herb master records from MongoDB with filter:', filter);
 
-    try {
-        const query = {};
+        try {
+            const query = {};
 
-        // Filter by custom id field (not MongoDB _id)
-        if (filter.id) {
-            query.id = { $regex: filter.id, $options: 'i' };
+            // Filter by custom id field (not MongoDB _id)
+            if (filter.id) {
+                query.id = { $regex: filter.id, $options: 'i' };
+            }
+
+            if (filter.name) {
+                query.name = { $regex: filter.name, $options: 'i' };
+            }
+
+            if (filter.scientificName) {
+                query.scientificName = { $regex: filter.scientificName, $options: 'i' };
+            }
+
+            if (filter.category) {
+                query.category = filter.category;
+            }
+
+            // Get all results without pagination
+            const results = await Herb.find(query)
+                .sort({ name: 1 })
+                .select('id name scientificName commonNames category parts createdAt updatedAt')
+                .lean();
+
+            // Transform results
+            const transformedResults = results.map(herb => ({
+                id: herb.id,
+                name: herb.name,
+                scientificName: herb.scientificName,
+                commonNames: herb.commonNames || [],
+                category: herb.category,
+                parts: herb.parts || [],
+                createdAt: herb.createdAt,
+                updatedAt: herb.updatedAt
+            }));
+
+            console.log('✅ All herb master records retrieved from MongoDB:', transformedResults.length);
+
+            return {
+                results: transformedResults,
+                totalResults: transformedResults.length
+            };
+
+        } catch (error) {
+            console.error('❌ Failed to get herb master records from MongoDB:', error);
+            throw new Error('Failed to retrieve herb master records from database');
         }
-
-        if (filter.name) {
-            query.name = { $regex: filter.name, $options: 'i' };
-        }
-
-        if (filter.scientificName) {
-            query.scientificName = { $regex: filter.scientificName, $options: 'i' };
-        }
-
-        if (filter.category) {
-            query.category = filter.category;
-        }
-
-        const defaultOptions = {
-            page: 1,
-            limit: 10,
-            sort: { name: 1 }
-        };
-
-        const queryOptions = { ...defaultOptions, ...options };
-        const result = await Herb.paginate(query, queryOptions);
-
-        // Manually transform results to use custom id field
-        if (result.results) {
-            result.results = result.results.map(herb => {
-                const herbObj = herb.toObject(); // Convert to plain object
-                return {
-                    id: herbObj.id, // Use custom id field
-                    name: herbObj.name,
-                    scientificName: herbObj.scientificName,
-                    commonNames: herbObj.commonNames || [],
-                    category: herbObj.category,
-                    parts: herbObj.parts || [],
-                    createdAt: herbObj.createdAt,
-                    updatedAt: herbObj.updatedAt
-                };
-            });
-        }
-
-        console.log('✅ All herb master records retrieved from MongoDB:', result.totalResults);
-        return result;
-
-    } catch (error) {
-        console.error('❌ Failed to get herb master records from MongoDB:', error);
-        throw new Error('Failed to retrieve herb master records from database');
     }
-}
+
+
 
 
     static async updateHerb(herbId, updateData) {

@@ -40,32 +40,26 @@ class HerbController {
         });
     });
 
-// src/controllers/herb.controller.js - Updated getAllHerbs method
-static getAllHerbs = catchAsync(async (req, res) => {
-    const filter = {
-        id: req.query.id,           // Custom id filter
-        name: req.query.name,
-        category: req.query.category,
-        scientificName: req.query.scientificName
-    };
+    static getAllHerbs = catchAsync(async (req, res) => {
+        const filter = {
+            id: req.query.id,
+            name: req.query.name,
+            category: req.query.category,
+            scientificName: req.query.scientificName
+        };
 
-    // Remove undefined values
-    Object.keys(filter).forEach(key => {
-        if (filter[key] === undefined) delete filter[key];
+        Object.keys(filter).forEach(key => {
+            if (filter[key] === undefined) delete filter[key];
+        });
+
+        const result = await HerbService.getAllHerbs(filter);
+        res.status(httpStatus.OK).json({
+            success: true,
+            data: result
+        });
     });
 
-    const options = {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10,
-        sort: req.query.sort || { name: 1 }
-    };
 
-    const result = await HerbService.getAllHerbs(filter, options);
-    res.status(httpStatus.OK).json({
-        success: true,
-        data: result
-    });
-});
 
 
     static getHerbsByCategory = catchAsync(async (req, res) => {
