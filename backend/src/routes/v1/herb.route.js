@@ -7,7 +7,6 @@ router.get('/', herbController.getAllHerbs);
 router.get('/:id', herbController.getHerb);
 router.put('/:id', herbController.updateHerb);
 router.delete('/:id', herbController.deleteHerb);
-router.post('/:id/transfer', herbController.transferHerb);
 // In your routes file, add:
 router.get('/blockchain-status', herbController.checkBlockchainStatus);
 
