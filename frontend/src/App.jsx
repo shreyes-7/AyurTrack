@@ -2,6 +2,8 @@ import React, { Suspense, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./Components/Navbar";
 import Footer from "./Components/Footer";
+import ScrollToTop from "./Components/ScrollToTop";
+import About from "./Pages/AboutPage";
 
 // Lazy load pages
 const Home = lazy(() => import("./Pages/Home"));
@@ -19,6 +21,7 @@ export default function App() {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
+      <ScrollToTop />
       <main className="flex-grow">
         <Suspense fallback={<div className="text-center p-10">Loading...</div>}>
           <Routes>
@@ -33,7 +36,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="*" element={<NotFound />} />
-
+            <Route path="/about" element={<About />} />
           </Routes>
         </Suspense>
       </main>
