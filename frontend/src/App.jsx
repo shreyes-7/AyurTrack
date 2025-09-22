@@ -4,7 +4,6 @@ import Navbar from "./Components/Navbar";
 import Footer from "./Components/Footer";
 import ScrollToTop from "./Components/ScrollToTop";
 import About from "./Pages/AboutPage";
-
 // Lazy load pages
 const Home = lazy(() => import("./Pages/Home"));
 const Dashboard = lazy(() => import("./Pages/Dashboard"));
@@ -16,6 +15,7 @@ const ConsumerPortal = lazy(() => import("./Pages/ConsumerPortal"));
 const Settings = lazy(() => import("./Pages/Settings"));
 const NotFound = lazy(() => import("./Pages/NotFound"));
 const AdminDashboard = lazy(() => import("./Pages/AdminDashboard"));
+const AddHerb = lazy(() => import("./Pages/AddHerb"));
 
 export default function App() {
   return (
@@ -37,6 +37,7 @@ export default function App() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="*" element={<NotFound />} />
             <Route path="/about" element={<About />} />
+            <Route path="/add-herb" element={<AddHerb />} />
           </Routes>
         </Suspense>
       </main>
