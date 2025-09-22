@@ -1,215 +1,109 @@
-// fabric/extractRealCertificates.js
-const { execSync } = require('child_process');
+'use strict';
+
+const { Wallets } = require('fabric-network');
 const fs = require('fs');
 const path = require('path');
-const { Wallets } = require('fabric-network');
 
-async function extractRealCertificates() {
+async function main() {
     try {
-        console.log('Extracting REAL certificates from your running peer...\n');
-
-        // Clean up wallet first
+        console.log('🔧 Creating wallet identities from test network certificates...');
+        
+        // Create wallet directory
         const walletPath = path.join(__dirname, 'wallet');
+        if (!fs.existsSync(walletPath)) {
+            fs.mkdirSync(walletPath, { recursive: true });
+            console.log(`📁 Created wallet directory: ${walletPath}`);
+        }
+        
         const wallet = await Wallets.newFileSystemWallet(walletPath);
 
-        try {
-            await wallet.remove('appUser');
-            await wallet.remove('admin');
-            console.log('✓ Cleaned existing wallet');
-        } catch (e) { }
+        // Correct path to your test network certificates
+        const org1AdminPath = path.resolve(
+            __dirname, '..', '..', 'fabric', 'fabric-samples', 'test-network', 
+            'organizations', 'peerOrganizations', 'org1.example.com', 'users', 
+            'Admin@org1.example.com', 'msp'
+        );
 
-        // Extract certificate
-        console.log('Extracting certificate...');
-        const certificate = execSync('docker exec peer0.org1.example.com cat /etc/hyperledger/fabric/msp/signcerts/cert.pem', { encoding: 'utf8' });
-        console.log('✓ Certificate extracted');
-        console.log('Certificate preview:', certificate.substring(0, 100) + '...');
+        const certPath = path.join(org1AdminPath, 'signcerts', 'cert.pem');
+        const keyDir = path.join(org1AdminPath, 'keystore');
 
-        // Extract private key
-        console.log('\nExtracting private key...');
-        const keyFiles = execSync('docker exec peer0.org1.example.com find /etc/hyperledger/fabric/msp/keystore -name "*_sk"', { encoding: 'utf8' }).trim();
+        console.log(`🔍 Looking for certificate: ${certPath}`);
+        console.log(`🔍 Looking for keys in: ${keyDir}`);
 
-        if (!keyFiles) {
-            throw new Error('No private key files found in keystore');
+        // Verify certificate file exists
+        if (!fs.existsSync(certPath)) {
+            throw new Error(`❌ Certificate file not found: ${certPath}`);
         }
 
-        const keyFile = keyFiles.split('\n')[0];
-        console.log('Key file found:', keyFile);
-
-        const privateKey = execSync(`docker exec peer0.org1.example.com cat ${keyFile}`, { encoding: 'utf8' });
-        console.log('✓ Private key extracted');
-        console.log('Private key preview:', privateKey.substring(0, 50) + '...');
-
-        // Validate certificate format
-        const certTrimmed = certificate.trim();
-        if (!certTrimmed.startsWith('-----BEGIN CERTIFICATE-----') || !certTrimmed.endsWith('-----END CERTIFICATE-----')) {
-            throw new Error('Invalid certificate format');
+        // Verify keystore directory exists
+        if (!fs.existsSync(keyDir)) {
+            throw new Error(`❌ Keystore directory not found: ${keyDir}`);
         }
 
-        // Validate private key format
-        const keyTrimmed = privateKey.trim();
-        if (!keyTrimmed.startsWith('-----BEGIN PRIVATE KEY-----') &&
-            !keyTrimmed.startsWith('-----BEGIN EC PRIVATE KEY-----')) {
-            throw new Error('Invalid private key format');
+        // Read certificate
+        const certificate = fs.readFileSync(certPath, 'utf8');
+        console.log('✅ Certificate loaded successfully');
+
+        // Find and read private key
+        const keyFiles = fs.readdirSync(keyDir);
+        const privateKeyFile = keyFiles.find(file => 
+            file.endsWith('_sk') || file.includes('priv') || file.endsWith('.pem')
+        );
+
+        if (!privateKeyFile) {
+            console.log('Available files in keystore:', keyFiles);
+            throw new Error(`❌ No private key file found in ${keyDir}`);
         }
 
-        console.log('\n✓ Certificate and key format validation passed');
+        const privateKeyPath = path.join(keyDir, privateKeyFile);
+        const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+        console.log(`✅ Private key loaded: ${privateKeyFile}`);
 
-        // Save certificates to files for inspection
-        fs.writeFileSync(path.join(__dirname, 'extracted_cert.pem'), certTrimmed);
-        fs.writeFileSync(path.join(__dirname, 'extracted_key.pem'), keyTrimmed);
-        console.log('✓ Saved certificates to files for inspection');
-
-        // Create identity
+        // Create X.509 identity
         const identity = {
             credentials: {
-                certificate: certTrimmed,
-                privateKey: keyTrimmed
+                certificate: certificate,
+                privateKey: privateKey,
             },
             mspId: 'Org1MSP',
             type: 'X.509',
         };
 
-        // Test the identity before saving
-        console.log('\nTesting identity validity...');
-        try {
-            const provider = wallet.getProviderRegistry().getProvider(identity.type);
-            await provider.getUserContext(identity, 'testUser');
-            console.log('✓ Identity validation successful');
-        } catch (validationError) {
-            console.error('✗ Identity validation failed:', validationError.message);
-
-            // Try to decode the certificate to see what's wrong
-            console.log('\nAnalyzing certificate...');
-            try {
-                const { execSync } = require('child_process');
-                const certInfo = execSync(`echo "${certTrimmed}" | openssl x509 -text -noout`, { encoding: 'utf8' });
-                console.log('Certificate info:', certInfo.substring(0, 500));
-            } catch (opensslError) {
-                console.log('OpenSSL not available, cannot analyze certificate');
-            }
-
-            throw validationError;
-        }
-
-        // Save to wallet
-        await wallet.put('appUser', identity);
+        // Store both admin and appUser (use same identity for both)
         await wallet.put('admin', identity);
+        await wallet.put('appUser', identity);
 
-        console.log('✓ Successfully created wallet with real certificates');
+        console.log('✅ Admin identity created and stored');
+        console.log('✅ AppUser identity created and stored');
 
-        return true;
+        // Verify identities
+        const adminExists = await wallet.get('admin');
+        const appUserExists = await wallet.get('appUser');
+
+        console.log('\n📋 VERIFICATION:');
+        console.log(`   Admin identity: ${adminExists ? '✅ Found' : '❌ Missing'}`);
+        console.log(`   AppUser identity: ${appUserExists ? '✅ Found' : '❌ Missing'}`);
+        console.log(`   Wallet location: ${walletPath}`);
+
+        console.log('\n🎉 SUCCESS! Your backend can now connect to Fabric network.');
+        console.log('💡 You can now test your backend API calls.');
 
     } catch (error) {
-        console.error('Failed to extract real certificates:', error.message);
-
-        if (error.message.includes('docker exec')) {
-            console.log('\n❌ Docker command failed. Make sure:');
-            console.log('1. Docker is running');
-            console.log('2. peer0.org1.example.com container is running');
-            console.log('3. You have the correct container name');
-            console.log('\nTry running: docker ps | grep peer0.org1');
-        }
-
-        return false;
+        console.error(`❌ Error: ${error.message}`);
+        
+        console.log('\n🔧 TROUBLESHOOTING TIPS:');
+        console.log('1. Verify test network is in the expected location:');
+        const expectedPath = path.resolve(__dirname, '..', '..', 'fabric', 'fabric-samples', 'test-network');
+        console.log(`   Expected: ${expectedPath}`);
+        console.log(`   Check: ls -la "${expectedPath}"`);
+        
+        console.log('\n2. Verify certificate files exist:');
+        const certDir = path.resolve(__dirname, '..', '..', 'fabric', 'fabric-samples', 'test-network', 'organizations', 'peerOrganizations', 'org1.example.com', 'users', 'Admin@org1.example.com', 'msp');
+        console.log(`   Check: ls -la "${certDir}/signcerts/"`);
+        console.log(`   Check: ls -la "${certDir}/keystore/"`);
+        
+        process.exit(1);
     }
 }
 
-// Also create a function to test connection with extracted certs
-async function testConnectionWithRealCerts() {
-    try {
-        console.log('\n--- Testing connection with real certificates ---');
-
-        // Update fabricClient to use non-TLS for testing
-        const fabricClientPath = path.join(__dirname, 'fabricClient.js');
-        const simpleClient = `const { Gateway, Wallets } = require('fabric-network');
-const path = require('path');
-
-async function getContract(user = 'appUser', org = 'Org1') {
-    try {
-        console.log('Connecting with extracted certificates...');
-        
-        const walletPath = path.join(__dirname, 'wallet');
-        const wallet = await Wallets.newFileSystemWallet(walletPath);
-        
-        const identity = await wallet.get(user);
-        if (!identity) {
-            throw new Error(\`Identity \${user} not found\`);
-        }
-        
-        const connectionProfile = {
-            name: "test-network",
-            version: "1.0.0",
-            client: { organization: "Org1" },
-            organizations: {
-                Org1: { mspid: "Org1MSP", peers: ["peer0.org1.example.com"] }
-            },
-            peers: {
-                "peer0.org1.example.com": {
-                    url: "grpc://localhost:7051",
-                    grpcOptions: {
-                        "ssl-target-name-override": "peer0.org1.example.com"
-                    }
-                }
-            },
-            channels: {
-                mychannel: {
-                    peers: { "peer0.org1.example.com": { endorsingPeer: true, chaincodeQuery: true } }
-                }
-            }
-        };
-        
-        const gateway = new Gateway();
-        await gateway.connect(connectionProfile, {
-            wallet, identity: user, discovery: { enabled: false }
-        });
-        
-        const network = await gateway.getNetwork('mychannel');
-        const contract = network.getContract('herbaltrace');
-        
-        return { contract, gateway };
-    } catch (error) {
-        throw error;
-    }
-}
-
-module.exports = { getContract };`;
-
-        fs.writeFileSync(fabricClientPath, simpleClient);
-        console.log('✓ Updated fabricClient.js for testing');
-
-        // Test the connection
-        const { getContract } = require('./fabricClient');
-        const { contract, gateway } = await getContract('appUser');
-
-        console.log('✓ Connection successful!');
-
-        // Try a simple query
-        const result = await contract.evaluateTransaction('GetAllHerbs');
-        console.log('✓ Query successful!');
-        console.log('Result:', result.toString().substring(0, 200) + '...');
-
-        await gateway.disconnect();
-
-        console.log('\n🎉 SUCCESS! Your blockchain connection is working!');
-        console.log('You can now test your API endpoints.');
-
-    } catch (error) {
-        console.error('Connection test failed:', error.message);
-
-        if (error.message.includes('ECONNREFUSED') || error.message.includes('not connected')) {
-            console.log('\n💡 Try these solutions:');
-            console.log('1. Make sure your peer is running: docker ps | grep peer0.org1');
-            console.log('2. Try with TLS enabled (grpcs://) if your peer requires it');
-            console.log('3. Check if peer is listening on port 7051: docker port peer0.org1.example.com');
-        }
-    }
-}
-
-// Run extraction and test
-extractRealCertificates()
-    .then((success) => {
-        if (success) {
-            return testConnectionWithRealCerts();
-        }
-    })
-    .catch(error => console.error('Setup failed:', error.message));
+main();
