@@ -23,11 +23,12 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 class AyurTrackContract extends Contract {
 
     /* -------------------------------------
-       Extended InitLedger with hardcoded species
+       Extended InitLedger with comprehensive sample data
        ------------------------------------- */
     async InitLedger(ctx) {
-        console.info('=== InitLedger: setting default species and sample participant ===');
+        console.info('=== InitLedger: setting up comprehensive sample data ===');
 
+        // Set up species rules for multiple herbs
         const speciesList = [
             {
                 species: 'Ashwagandha',
@@ -46,6 +47,18 @@ class AyurTrackContract extends Contract {
                 geofence: { center: { lat: 25.4, long: 82.0 }, radiusMeters: 60000 },
                 allowedMonths: [9,10,11,12],
                 qualityThresholds: { moistureMax: 8, pesticidePPMMax: 1 }
+            },
+            {
+                species: 'Turmeric',
+                geofence: { center: { lat: 13.0827, long: 80.2707 }, radiusMeters: 80000 },
+                allowedMonths: [2,3,4,11,12],
+                qualityThresholds: { moistureMax: 8, pesticidePPMMax: 1.5, curcuminMin: 3.0 }
+            },
+            {
+                species: 'Neem',
+                geofence: { center: { lat: 23.2599, long: 77.4126 }, radiusMeters: 100000 },
+                allowedMonths: [6,7,8,9,10],
+                qualityThresholds: { moistureMax: 12, pesticidePPMMax: 0.5 }
             }
         ];
 
@@ -53,24 +66,236 @@ class AyurTrackContract extends Contract {
             await ctx.stub.putState(`SPECIES_RULES_${s.species}`, Buffer.from(JSON.stringify(s)));
         }
 
-        const sampleFarmer = {
-            docType: 'participant',
-            type: 'farmer',
-            id: 'F001',
-            name: 'Ram Kumar',
-            location: 'VillageX',
-            mspId: 'Org1MSP'
-        };
-        await ctx.stub.putState('PARTICIPANT_farmer_F001', Buffer.from(JSON.stringify(sampleFarmer)));
+        // Create comprehensive sample participants for all roles
+        const sampleParticipants = [
+            // Farmers (Org1MSP)
+            {
+                docType: 'participant', type: 'farmer', id: 'F001',
+                name: 'Ram Kumar', location: 'Village Rajasthan', mspId: 'Org1MSP',
+                contact: '+91-9876543210', certifications: ['Organic', 'Fair Trade']
+            },
+            {
+                docType: 'participant', type: 'farmer', id: 'F002',
+                name: 'Sita Devi', location: 'Village Karnataka', mspId: 'Org1MSP',
+                contact: '+91-9876543211', certifications: ['Organic']
+            },
+            {
+                docType: 'participant', type: 'farmer', id: 'F003',
+                name: 'Ravi Patel', location: 'Village Gujarat', mspId: 'Org1MSP',
+                contact: '+91-9876543212', certifications: ['Traditional']
+            },
 
-        console.info('=== InitLedger done ===');
+            // Processors (Org1MSP)
+            {
+                docType: 'participant', type: 'processor', id: 'P001',
+                name: 'Ayur Processing Co', location: 'Jaipur Industrial Area', mspId: 'Org1MSP',
+                license: 'PROC2024001', capacity: '1000kg/day'
+            },
+            {
+                docType: 'participant', type: 'processor', id: 'P002',
+                name: 'Herbal Processing Ltd', location: 'Bangalore Tech Park', mspId: 'Org1MSP',
+                license: 'PROC2024002', capacity: '2000kg/day'
+            },
+
+            // Labs (Org2MSP)
+            {
+                docType: 'participant', type: 'lab', id: 'L001',
+                name: 'Quality Test Labs', location: 'Delhi NCR', mspId: 'Org2MSP',
+                certification: 'ISO17025', accreditation: 'NABL'
+            },
+            {
+                docType: 'participant', type: 'lab', id: 'L002',
+                name: 'Advanced Herbal Testing', location: 'Mumbai', mspId: 'Org2MSP',
+                certification: 'ISO17025', accreditation: 'NABL'
+            },
+
+            // Manufacturers (Org2MSP)
+            {
+                docType: 'participant', type: 'manufacturer', id: 'M001',
+                name: 'Himalaya Drug Company', location: 'Bangalore', mspId: 'Org2MSP',
+                license: 'MFG2024001', capacity: '50000units/day'
+            },
+            {
+                docType: 'participant', type: 'manufacturer', id: 'M002',
+                name: 'Patanjali Ayurved', location: 'Haridwar', mspId: 'Org2MSP',
+                license: 'MFG2024002', capacity: '100000units/day'
+            }
+        ];
+
+        for (const participant of sampleParticipants) {
+            const key = `PARTICIPANT_${participant.type}_${participant.id}`;
+            await ctx.stub.putState(key, Buffer.from(JSON.stringify(participant)));
+        }
+
+        // Create sample herb batches with proper data
+        const sampleBatches = [
+            {
+                docType: 'herbBatch', batchId: 'BATCH001', collectionId: 'COLL001',
+                collectorId: 'F001', lat: 26.9124, long: 75.7873,
+                timestamp: '2025-01-15T08:30:00Z', species: 'Ashwagandha',
+                quantity: 50.5, quality: { moisture: 8.5, pesticidePPM: 1.2 },
+                currentOwner: 'F001', status: 'collected', recordedByMSP: 'Org1MSP'
+            },
+            {
+                docType: 'herbBatch', batchId: 'BATCH002', collectionId: 'COLL002',
+                collectorId: 'F002', lat: 28.6139, long: 77.2090,
+                timestamp: '2025-06-20T06:00:00Z', species: 'Tulsi',
+                quantity: 25.0, quality: { moisture: 11.0, pesticidePPM: 0.8 },
+                currentOwner: 'F002', status: 'collected', recordedByMSP: 'Org1MSP'
+            },
+            {
+                docType: 'herbBatch', batchId: 'BATCH003', collectionId: 'COLL003',
+                collectorId: 'F003', lat: 25.4358, long: 81.8463,
+                timestamp: '2025-11-10T07:15:00Z', species: 'Amla',
+                quantity: 75.2, quality: { moisture: 7.5, pesticidePPM: 0.5 },
+                currentOwner: 'F003', status: 'collected', recordedByMSP: 'Org1MSP'
+            }
+        ];
+
+        for (const batch of sampleBatches) {
+            await ctx.stub.putState(`HERBBATCH_${batch.batchId}`, Buffer.from(JSON.stringify(batch)));
+            
+            // Create corresponding collection events
+            const collection = {
+                docType: 'collectionEvent',
+                collectionId: batch.collectionId,
+                batchId: batch.batchId,
+                collectorId: batch.collectorId,
+                lat: batch.lat,
+                long: batch.long,
+                timestamp: batch.timestamp,
+                species: batch.species,
+                quantity: batch.quantity,
+                quality: batch.quality,
+                recordedByMSP: batch.recordedByMSP
+            };
+            await ctx.stub.putState(`COLLECTION_${batch.collectionId}`, Buffer.from(JSON.stringify(collection)));
+        }
+
+        // Create sample processing steps
+        const sampleProcessingSteps = [
+            {
+                docType: 'processingStep', processId: 'PROC001', batchId: 'BATCH001',
+                facilityId: 'P001', stepType: 'cleaning', params: {},
+                timestamp: '2025-01-16T10:00:00Z', recordedByMSP: 'Org1MSP'
+            },
+            {
+                docType: 'processingStep', processId: 'PROC002', batchId: 'BATCH001',
+                facilityId: 'P001', stepType: 'drying',
+                params: { temperature: '40C', duration: '8hours', method: 'shade_dried' },
+                timestamp: '2025-01-16T14:00:00Z', recordedByMSP: 'Org1MSP'
+            },
+            {
+                docType: 'processingStep', processId: 'PROC003', batchId: 'BATCH001',
+                facilityId: 'P001', stepType: 'grinding',
+                params: { mesh_size: '80', temperature: 'ambient' },
+                timestamp: '2025-01-17T09:00:00Z', recordedByMSP: 'Org1MSP'
+            }
+        ];
+
+        for (const proc of sampleProcessingSteps) {
+            await ctx.stub.putState(`PROCESS_${proc.processId}`, Buffer.from(JSON.stringify(proc)));
+        }
+
+        // Create sample quality tests
+        const sampleQualityTests = [
+            {
+                docType: 'qualityTest', testId: 'TEST001', batchId: 'BATCH001',
+                labId: 'L001', testType: 'moisture_test',
+                results: { moisture: 8.2, method: 'LOD', temperature: '105C' },
+                timestamp: '2025-01-18T10:30:00Z', recordedByMSP: 'Org2MSP'
+            },
+            {
+                docType: 'qualityTest', testId: 'TEST002', batchId: 'BATCH001',
+                labId: 'L001', testType: 'pesticide_test',
+                results: { pesticidePPM: 1.1, compounds_tested: ['organophosphates', 'organochlorines'], method: 'GC-MS' },
+                timestamp: '2025-01-18T14:00:00Z', recordedByMSP: 'Org2MSP'
+            },
+            {
+                docType: 'qualityTest', testId: 'TEST003', batchId: 'BATCH001',
+                labId: 'L001', testType: 'active_compound',
+                results: { withanolides: '2.8%', method: 'HPLC', standard: 'USP_monograph' },
+                timestamp: '2025-01-19T15:00:00Z', recordedByMSP: 'Org2MSP'
+            }
+        ];
+
+        for (const test of sampleQualityTests) {
+            await ctx.stub.putState(`QUALITY_${test.testId}`, Buffer.from(JSON.stringify(test)));
+        }
+
+        // Update batch status after processing and testing
+        const updatedBatch001 = {
+            ...sampleBatches[0],
+            status: 'processed:grinding',
+            currentOwner: 'P001',
+            lastQualityTest: 'TEST003'
+        };
+        await ctx.stub.putState('HERBBATCH_BATCH001', Buffer.from(JSON.stringify(updatedBatch001)));
+
+        // Create sample formulations
+        const sampleFormulations = [
+            {
+                docType: 'formulation', productBatchId: 'PROD001', manufacturerId: 'M001',
+                inputBatches: ['BATCH001'],
+                formulationParams: {
+                    product_type: 'capsules', dosage: '500mg',
+                    excipients: ['microcrystalline_cellulose', 'magnesium_stearate'],
+                    batch_size: '10000_units'
+                },
+                timestamp: '2025-01-20T08:00:00Z', recordedByMSP: 'Org2MSP',
+                qrToken: 'PROD001_1737360000000'
+            },
+            {
+                docType: 'formulation', productBatchId: 'PROD002', manufacturerId: 'M001',
+                inputBatches: ['BATCH001', 'BATCH002', 'BATCH003'],
+                formulationParams: {
+                    product_type: 'tablets',
+                    formula_ratio: { Ashwagandha: '40%', Tulsi: '30%', Amla: '30%' },
+                    tablet_weight: '1000mg', batch_size: '5000_units'
+                },
+                timestamp: '2025-01-25T10:00:00Z', recordedByMSP: 'Org2MSP',
+                qrToken: 'IMMUNITY_BOOST_2025'
+            }
+        ];
+
+        for (const form of sampleFormulations) {
+            await ctx.stub.putState(`FORM_${form.productBatchId}`, Buffer.from(JSON.stringify(form)));
+            // Create QR token mappings
+            await ctx.stub.putState(`BATCHQR_${form.qrToken}`, Buffer.from(form.productBatchId));
+            
+            // Update input batches as used in formulation
+            for (const batchId of form.inputBatches) {
+                const batchKey = `HERBBATCH_${batchId}`;
+                const batchBytes = await ctx.stub.getState(batchKey);
+                if (batchBytes && batchBytes.length > 0) {
+                    const batch = JSON.parse(batchBytes.toString());
+                    batch.status = 'used_in_formulation';
+                    batch.currentOwner = form.manufacturerId;
+                    if (!batch.usedIn) batch.usedIn = [];
+                    if (!batch.usedIn.includes(form.productBatchId)) {
+                        batch.usedIn.push(form.productBatchId);
+                    }
+                    await ctx.stub.putState(batchKey, Buffer.from(JSON.stringify(batch)));
+                }
+            }
+        }
+
+        console.info('=== InitLedger completed with comprehensive sample data ===');
+        return {
+            message: 'Ledger initialized successfully',
+            species_count: speciesList.length,
+            participants_count: sampleParticipants.length,
+            batches_count: sampleBatches.length,
+            processing_steps_count: sampleProcessingSteps.length,
+            quality_tests_count: sampleQualityTests.length,
+            formulations_count: sampleFormulations.length
+        };
     }
 
     /* -------------------------------------
        Participant registry
        ------------------------------------- */
 
-    // participantJson must include at least: { "type":"farmer"|"lab"|"processor"|"manufacturer", "id":"F001", "name":"Ram", "mspId":"Org1MSP", ... }
     async CreateParticipant(ctx, participantJson) {
         const p = JSON.parse(participantJson);
         if (!p.type || !p.id || !p.mspId) throw new Error('participant must have type, id and mspId');
@@ -113,10 +338,6 @@ class AyurTrackContract extends Contract {
         return true;
     }
 
-    /* -------------------------------------
-       Extra CRUD for Participants
-       ------------------------------------- */
-
     async UpdateParticipant(ctx, type, id, updatedJson) {
         const key = `PARTICIPANT_${type}_${id}`;
         const bytes = await ctx.stub.getState(key);
@@ -155,7 +376,6 @@ class AyurTrackContract extends Contract {
        Collection / Herb batch
        ------------------------------------- */
 
-    // CreateHerbBatch(batchId, collectionId, collectorId, lat, long, timestamp, species, quantity, qualityJson)
     async CreateHerbBatch(ctx, batchId, collectionId, collectorId, latStr, longStr, timestamp, species, quantityStr, qualityJson) {
         // enforce caller matches participant (so only the farmer org owning the farmer id can call)
         await this._assertInvokerMatchesParticipantMSP(ctx, 'farmer', collectorId);
@@ -225,10 +445,6 @@ class AyurTrackContract extends Contract {
         return data.toString();
     }
 
-    /* -------------------------------------
-       Extra CRUD for Herb Batches
-       ------------------------------------- */
-
     async UpdateHerbBatch(ctx, batchId, updatedJson) {
         const key = `HERBBATCH_${batchId}`;
         const bytes = await ctx.stub.getState(key);
@@ -262,7 +478,6 @@ class AyurTrackContract extends Contract {
        Processing steps
        ------------------------------------- */
 
-    // AddProcessingStep(processId, batchId, facilityId, stepType, paramsJson, timestamp)
     async AddProcessingStep(ctx, processId, batchId, facilityId, stepType, paramsJson, timestamp) {
         // only processor org that registered facilityId may call
         await this._assertInvokerMatchesParticipantMSP(ctx, 'processor', facilityId);
@@ -299,7 +514,6 @@ class AyurTrackContract extends Contract {
        Quality tests (labs)
        ------------------------------------- */
 
-    // AddQualityTest(testId, batchId, labId, testType, resultsJson, timestamp)
     async AddQualityTest(ctx, testId, batchId, labId, testType, resultsJson, timestamp) {
         // only lab org that owns labId can call
         await this._assertInvokerMatchesParticipantMSP(ctx, 'lab', labId);
@@ -343,7 +557,6 @@ class AyurTrackContract extends Contract {
        Formulation / final product
        ------------------------------------- */
 
-    // CreateFormulation(productBatchId, manufacturerId, inputBatchesJson, formulationParamsJson, timestamp)
     async CreateFormulation(ctx, productBatchId, manufacturerId, inputBatchesJson, formulationParamsJson, timestamp) {
         // only manufacturer org that owns manufacturerId can call
         await this._assertInvokerMatchesParticipantMSP(ctx, 'manufacturer', manufacturerId);
@@ -380,7 +593,6 @@ class AyurTrackContract extends Contract {
         return form;
     }
 
-    // GenerateBatchQR(productBatchId, token)
     async GenerateBatchQR(ctx, productBatchId, token) {
         // token optional
         let t = token;
@@ -401,7 +613,6 @@ class AyurTrackContract extends Contract {
        Provenance
        ------------------------------------- */
 
-    // GetProvenance(productBatchId)
     async GetProvenance(ctx, productBatchId) {
         const formKey = `FORM_${productBatchId}`;
         const formBytes = await ctx.stub.getState(formKey);
