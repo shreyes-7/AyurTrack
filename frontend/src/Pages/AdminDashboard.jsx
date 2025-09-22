@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../Components/Layout";
 import Card from "../Components/Card";
 import { motion } from "framer-motion";
+import ExportData from '../Components/ExportData'; // Adjust path as needed
 import {
   Users,
   Activity,
@@ -22,7 +23,6 @@ import {
   Download,
   Leaf
 } from "lucide-react";
-
 // Mock data for admin functionality
 const mockUsers = [
   {
@@ -175,6 +175,10 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const handleAddHerb = () => navigate("/add-herb");
+  const handleExportData = () => {
+  ExportData.handleExport(activeTab, users, herbs, activities, auditLogs);
+};
+
   // Fetch herbs from API using axios
   const fetchHerbs = async () => {
     setLoading(true);
@@ -349,10 +353,13 @@ export default function AdminDashboard() {
             <p className="text-gray-400 mt-1">Manage users, roles, and monitor system activity</p>
           </div>
           <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-              <Download className="w-4 h-4" />
-              Export Data
-            </button>
+            <button 
+  onClick={handleExportData}  // ✅ This is correct
+  className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+>
+  <Download className="w-4 h-4" />
+  Export Data
+</button>
           </div>
         </div>
 
