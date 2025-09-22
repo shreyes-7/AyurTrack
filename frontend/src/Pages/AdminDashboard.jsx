@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Layout from "../Components/Layout";
 import Card from "../Components/Card";
 import { motion } from "framer-motion";
@@ -172,7 +173,8 @@ export default function AdminDashboard() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  const navigate = useNavigate();
+  const handleAddHerb = () => navigate("/add-herb");
   // Fetch herbs from API using axios
   const fetchHerbs = async () => {
     setLoading(true);
@@ -547,7 +549,7 @@ export default function AdminDashboard() {
               {/* Add Herb Button */}
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-white">Herb Management</h3>
-                <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2">
+                <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2" onClick={handleAddHerb}>
                   <Plus className="w-4 h-4" />
                   <span>Add Herb</span>
                 </button>
