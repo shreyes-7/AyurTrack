@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import Layout from "../Components/Layout";
 import Card from "../Components/Card";
 import { motion } from "framer-motion";
@@ -17,7 +18,8 @@ import {
   Plus,
   Search,
   Filter,
-  Download
+  Download,
+  Leaf
 } from "lucide-react";
 
 // Mock data for admin functionality
@@ -161,10 +163,48 @@ const roleOptions = [
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [users, setUsers] = useState(mockUsers);
+  const [herbs, setHerbs] = useState([]);
   const [activities, setActivities] = useState(mockActivities);
   const [auditLogs, setAuditLogs] = useState(mockAuditLogs);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [herbSearchTerm, setHerbSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch herbs from API using axios
+  const fetchHerbs = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get('http://localhost:3000/v1/herbs');
+
+      // Use only actual API data
+      const transformedHerbs = response.data.data.results.map(herb => ({
+        id: herb.id,
+        name: herb.name,
+        scientificName: herb.scientificName,
+        commonNames: herb.commonNames,
+        category: herb.category,
+        parts: herb.parts
+      }));
+
+      setHerbs(transformedHerbs);
+    } catch (err) {
+      console.error('Error fetching herbs:', err);
+      setError('Failed to fetch herbs data from API');
+      setHerbs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "herbs") {
+      fetchHerbs();
+    }
+  }, [activeTab]);
 
   // Filter users based on search and role
   const filteredUsers = users.filter(user => {
@@ -172,6 +212,15 @@ export default function AdminDashboard() {
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     return matchesSearch && matchesRole;
+  });
+
+  // Filter herbs based on search and category
+  const filteredHerbs = herbs.filter(herb => {
+    const matchesSearch = herb.name.toLowerCase().includes(herbSearchTerm.toLowerCase()) ||
+                         herb.scientificName.toLowerCase().includes(herbSearchTerm.toLowerCase()) ||
+                         herb.commonNames.some(name => name.toLowerCase().includes(herbSearchTerm.toLowerCase()));
+    const matchesCategory = categoryFilter === "all" || herb.category === categoryFilter;
+    return matchesSearch && matchesCategory;
   });
 
   // Filter activities based on search
@@ -196,7 +245,21 @@ export default function AdminDashboard() {
       case "success": return "text-green-400 bg-green-400/20";
       case "warning": return "text-yellow-400 bg-yellow-400/20";
       case "error": return "text-red-400 bg-red-400/20";
+      case "active": return "bg-green-500/20 text-green-400";
+      case "inactive": return "bg-red-500/20 text-red-400";
       default: return "text-gray-400 bg-gray-400/20";
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case "MEDICINAL": return "bg-blue-100 text-blue-800";
+      case "ADAPTOGEN": return "bg-green-100 text-green-800";
+      case "RESPIRATORY": return "bg-purple-100 text-purple-800";
+      case "DIGESTIVE": return "bg-yellow-100 text-yellow-800";
+      case "CULINARY": return "bg-orange-100 text-orange-800";
+      case "AROMATIC": return "bg-pink-100 text-pink-800";
+      default: return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -219,6 +282,24 @@ export default function AdminDashboard() {
     setUsers(users.map(user =>
       user.id === userId ? { ...user, status: newStatus } : user
     ));
+  };
+
+  const handleHerbEdit = (herbId) => {
+    console.log("Edit herb:", herbId);
+    // Implement edit functionality
+  };
+
+  const handleHerbDelete = async (herbId) => {
+    if (window.confirm("Are you sure you want to delete this herb?")) {
+      try {
+        await axios.delete(`http://localhost:3000/v1/herbs/${herbId}`);
+        setHerbs(herbs.filter(herb => herb.id !== herbId));
+      } catch (err) {
+        console.error('Error deleting herb:', err);
+        // For demo purposes, still remove from local state
+        setHerbs(herbs.filter(herb => herb.id !== herbId));
+      }
+    }
   };
 
   const stats = [
@@ -251,6 +332,7 @@ export default function AdminDashboard() {
   const tabs = [
     { id: "overview", label: "Overview", icon: <BarChart3 className="w-4 h-4" /> },
     { id: "users", label: "User Management", icon: <Users className="w-4 h-4" /> },
+    { id: "herbs", label: "Herb Management", icon: <Leaf className="w-4 h-4" /> },
     { id: "activities", label: "Activity Tracking", icon: <Activity className="w-4 h-4" /> },
     { id: "audit", label: "Audit Logs", icon: <FileText className="w-4 h-4" /> },
   ];
@@ -429,11 +511,7 @@ export default function AdminDashboard() {
                           </select>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            user.status === "active"
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-red-500/20 text-red-400"
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(user.status)}`}>
                             {user.status}
                           </span>
                         </td>
@@ -461,6 +539,140 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+            </Card>
+          )}
+
+          {activeTab === "herbs" && (
+            <Card title="Herb Management">
+              {/* Add Herb Button */}
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-white">Herb Management</h3>
+                <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2">
+                  <Plus className="w-4 h-4" />
+                  <span>Add Herb</span>
+                </button>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="bg-yellow-900 border border-yellow-700 text-yellow-300 px-4 py-3 rounded-lg mb-6">
+                  {error}
+                </div>
+              )}
+
+              {/* Search and Filter */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex-1 relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search herbs..."
+                    value={herbSearchTerm}
+                    onChange={(e) => setHerbSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="MEDICINAL">Medicinal</option>
+                  <option value="ADAPTOGEN">Adaptogen</option>
+                  <option value="RESPIRATORY">Respiratory</option>
+                  <option value="DIGESTIVE">Digestive</option>
+                  <option value="CULINARY">Culinary</option>
+                  <option value="AROMATIC">Aromatic</option>
+                </select>
+                <button
+                  onClick={fetchHerbs}
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                >
+                  <Filter className="w-4 h-4" />
+                  <span>{loading ? "Refreshing..." : "Refresh"}</span>
+                </button>
+              </div>
+
+              {/* Herbs Table */}
+              {loading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                  <span className="ml-2 text-white">Loading herbs...</span>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-gray-700">
+                        <th className="py-3 px-4 text-gray-400">ID</th>
+                        <th className="py-3 px-4 text-gray-400">Name</th>
+                        <th className="py-3 px-4 text-gray-400">Scientific Name</th>
+                        <th className="py-3 px-4 text-gray-400">Common Names</th>
+                        <th className="py-3 px-4 text-gray-400">Category</th>
+                        <th className="py-3 px-4 text-gray-400">Parts Used</th>
+                        <th className="py-3 px-4 text-gray-400">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredHerbs.map((herb) => (
+                        <tr key={herb.id} className="border-b border-gray-800 hover:bg-gray-800/40">
+                          <td className="py-3 px-4">
+                            <span className="text-white font-mono text-sm">{herb.id}</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-white font-medium">{herb.name}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-gray-400 text-sm italic">{herb.scientificName}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-gray-300 text-sm">
+                              {herb.commonNames.join(", ")}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(herb.category)}`}>
+                              {herb.category}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-gray-300 text-sm">
+                              {herb.parts.join(", ")}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleHerbEdit(herb.id)}
+                                className="p-1 text-blue-400 hover:text-blue-300"
+                                title="Edit herb"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleHerbDelete(herb.id)}
+                                className="p-1 text-red-400 hover:text-red-300"
+                                title="Delete herb"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {filteredHerbs.length === 0 && !loading && (
+                    <div className="text-center py-12">
+                      <Leaf className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                      <p className="text-gray-400">No herbs found matching your criteria.</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           )}
 

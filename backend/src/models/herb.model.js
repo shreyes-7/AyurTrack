@@ -34,7 +34,15 @@ const HerbSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
-HerbSchema.plugin(toJSON);
+HerbSchema.plugin(toJSON, {
+    transform: (doc, ret) => {
+        // Use the custom id field as the main id
+        ret.id = ret.id; // Keep custom id
+        delete ret._id; // Remove MongoDB _id
+        delete ret.__v; // Remove version key
+        return ret;
+    }
+});
 HerbSchema.plugin(paginate);
 
 // Basic indexes
