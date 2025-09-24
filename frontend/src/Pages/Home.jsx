@@ -70,12 +70,14 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-green-50 text-green-900 font-sans">
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 overflow-hidden">
+      <section className="relative min-h-screen pt-20 pb-32 overflow-hidden">
+        {/* Background Image */}
         <div
-          className="absolute inset-0 z-0 bg-cover bg-center"
+          className="absolute inset-0 z-0 bg-cover bg-top"
           style={{ backgroundImage: `url(${assets.bg_img})` }}
         ></div>
 
+        {/* Dark Overlay */}
         <div className="absolute inset-0 bg-black/30 z-10"></div>
 
         <div className="relative z-20 max-w-7xl mx-auto px-6 text-center">

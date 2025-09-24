@@ -3,6 +3,7 @@ import Card from "../Components/Card";
 import Layout from "../Components/Layout";
 import { Shield, Eye, Zap, Leaf, Users, Globe } from "lucide-react";
 import { motion } from "framer-motion";
+import { assets } from "../assets/assets";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 40, scale: 0.95 },
@@ -38,7 +39,7 @@ export default function About() {
     {
       name: "Prabhu Pachisia",
       role: "Backend Developer",
-      img: "/team/placeholder.jpg",
+      img: assets.prabhu,
     },
     {
       name: "Abhinav Pandey",
