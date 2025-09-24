@@ -80,11 +80,11 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-black/70 backdrop-blur-lg border-b border-gray-800 flex items-center justify-between px-6 h-16">
+      <nav className="sticky top-0 z-50 bg-green-50/80 backdrop-blur-lg border-b border-green-200 flex items-center justify-between px-6 h-16">
         <div className="flex items-center gap-4">
           <button
             onClick={toggleMenu}
-            className="p-2 text-gray-300 hover:text-green-400 transition-colors"
+            className="p-2 text-green-900 hover:text-green-600 transition-colors"
           >
             {isMenuOpen ? (
               <X className="w-6 h-6" />
@@ -94,7 +94,7 @@ export default function Navbar() {
           </button>
           <Link
             to="/"
-            className="flex items-center gap-2 text-green-400 font-bold text-xl"
+            className="flex items-center gap-2 text-green-700 font-bold text-xl"
             onClick={handleLinkClick}
           >
             <Leaf className="w-6 h-6" />
@@ -111,10 +111,10 @@ export default function Navbar() {
                 key={i}
                 to={item.path}
                 onClick={handleLinkClick}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform ${
                   isActive
-                    ? "bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-md"
-                    : "text-gray-300 hover:text-white hover:bg-gray-800"
+                    ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-md"
+                    : "text-green-900 hover:text-white hover:bg-green-300 hover:scale-105 hover:shadow-lg"
                 }`}
               >
                 {item.name}
@@ -130,7 +130,7 @@ export default function Navbar() {
           <>
             {/* Backdrop */}
             <motion.div
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+              className="fixed inset-0 bg-green-50/50 backdrop-blur-sm z-40 md:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -140,8 +140,8 @@ export default function Navbar() {
             {/* Sidebar */}
             <motion.div
               ref={sidebarRef}
-              className="fixed top-0 left-0 h-full bg-gray-900 border-r border-gray-800 z-50 p-6
-                   w-64 md:w-80 lg:w-64" // smaller width for large screens
+              className="fixed top-0 left-0 h-full bg-green-100 border-r border-green-200 z-50 p-6
+                 w-64 md:w-80 lg:w-64"
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -149,15 +149,15 @@ export default function Navbar() {
             >
               <button
                 onClick={() => setIsMenuOpen(false)}
-                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-400 transition"
+                className="absolute top-4 right-4 p-2 text-green-700 hover:text-red-400 transition"
               >
                 <X className="w-6 h-6" />
               </button>
               <div className="mb-6">
-                <h1 className="text-2xl font-extrabold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-extrabold bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
                   AyurTrack
                 </h1>
-                <p className="text-xs text-gray-400">Botanical Traceability</p>
+                <p className="text-xs text-green-700">Botanical Traceability</p>
               </div>
 
               <nav className="flex flex-col gap-2">
@@ -170,8 +170,8 @@ export default function Navbar() {
                       onClick={handleLinkClick} // close sidebar on link click
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition ${
                         isActive
-                          ? "bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-md"
-                          : "text-gray-400 hover:text-white hover:bg-gray-800"
+                          ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-md"
+                          : "text-green-900 hover:text-white hover:bg-green-200"
                       }`}
                     >
                       {item.icon}
@@ -183,7 +183,7 @@ export default function Navbar() {
                 {/* Dark mode inside sidebar */}
                 <button
                   onClick={() => setDark(!dark)}
-                  className="flex items-center gap-2 px-3 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition text-gray-300 mt-4"
+                  className="flex items-center gap-2 px-3 py-3 rounded-lg bg-green-200 hover:bg-green-300 transition text-green-900 mt-4"
                 >
                   {dark ? (
                     <Sun className="w-4 h-4 text-yellow-400" />

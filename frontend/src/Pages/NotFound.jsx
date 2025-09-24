@@ -6,14 +6,14 @@ import Layout from "../Components/Layout";
 export default function NotFound() {
   return (
     <Layout>
-      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
-        <h1 className="text-6xl font-bold text-gray-100 mb-4">404</h1>
-        <p className="text-xl text-gray-400 mb-6">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center bg-green-50">
+        <h1 className="text-6xl font-bold text-green-900 mb-4">404</h1>
+        <p className="text-xl text-green-700 mb-6">
           Oops! The page you are looking for does not exist.
         </p>
         <Link
           to="/"
-          className="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-2xl text-white hover:opacity-90 transition"
+          className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-400 rounded-2xl text-white hover:opacity-90 transition"
         >
           Go Home
         </Link>

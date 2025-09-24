@@ -48,8 +48,8 @@ export default function Dashboard() {
             <Card>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm text-gray-400">{s.label}</div>
-                  <div className="text-3xl font-bold text-white mt-1">
+                  <div className="text-sm text-green-700">{s.label}</div>
+                  <div className="text-3xl font-bold text-green-400 mt-1">
                     {s.value}
                   </div>
                 </div>
@@ -66,7 +66,6 @@ export default function Dashboard() {
 
       {/* Collections & System Health */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Latest Collections */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -117,7 +116,7 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">TX Latency</span>
-                <span className="font-medium">~600ms</span>
+                <span className="font-medium text-green-400">~600ms</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">System Status</span>

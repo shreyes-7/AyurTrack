@@ -89,10 +89,10 @@ export default function CollectorForm() {
 
   return (
     <Layout>
-      <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-green-50">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 overflow-hidden">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-green-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
               <h2 className="text-2xl font-bold text-white text-center">
                 🌿 Herb Collection Form
               </h2>
@@ -103,14 +103,14 @@ export default function CollectorForm() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {error && (
-                <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
-                  <p className="text-red-300 text-sm">{error}</p>
+                <div className="bg-red-100 border border-red-400 rounded-lg p-4">
+                  <p className="text-red-700 text-sm">{error}</p>
                 </div>
               )}
 
               {success && (
-                <div className="bg-green-900/50 border border-green-700 rounded-lg p-4">
-                  <p className="text-green-300 text-sm">
+                <div className="bg-green-100 border border-green-400 rounded-lg p-4">
+                  <p className="text-green-700 text-sm">
                     Collection data submitted successfully!
                   </p>
                 </div>
@@ -119,7 +119,7 @@ export default function CollectorForm() {
               <div>
                 <label
                   htmlFor="collectorName"
-                  className="block text-sm font-medium text-gray-300 mb-2"
+                  className="block text-sm font-medium text-green-800 mb-2"
                 >
                   Collector Name *
                 </label>
@@ -129,7 +129,7 @@ export default function CollectorForm() {
                   name="collectorName"
                   value={formData.collectorName}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-100 placeholder-gray-400"
+                  className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
                   placeholder="Enter your full name"
                   required
                 />
@@ -138,7 +138,7 @@ export default function CollectorForm() {
               <div>
                 <label
                   htmlFor="herbName"
-                  className="block text-sm font-medium text-gray-300 mb-2"
+                  className="block text-sm font-medium text-green-800 mb-2"
                 >
                   Herb Name *
                 </label>
@@ -148,7 +148,7 @@ export default function CollectorForm() {
                   name="herbName"
                   value={formData.herbName}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-100 placeholder-gray-400"
+                  className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
                   placeholder="e.g., Ashwagandha, Turmeric"
                   required
                 />
@@ -157,7 +157,7 @@ export default function CollectorForm() {
               <div>
                 <label
                   htmlFor="harvestDate"
-                  className="block text-sm font-medium text-gray-300 mb-2"
+                  className="block text-sm font-medium text-green-800 mb-2"
                 >
                   Harvest Date *
                 </label>
@@ -167,17 +167,18 @@ export default function CollectorForm() {
                   name="harvestDate"
                   value={formData.harvestDate}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-100"
+                  className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900"
                   max={new Date().toISOString().split("T")[0]}
                   required
                 />
               </div>
 
+              {/* Quantity & Unit */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label
                     htmlFor="quantity"
-                    className="block text-sm font-medium text-gray-300 mb-2"
+                    className="block text-sm font-medium text-green-800 mb-2"
                   >
                     Quantity
                   </label>
@@ -187,7 +188,7 @@ export default function CollectorForm() {
                     name="quantity"
                     value={formData.quantity}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-100 placeholder-gray-400"
+                    className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
                     placeholder="0"
                     min="0"
                     step="0.1"
@@ -196,7 +197,7 @@ export default function CollectorForm() {
                 <div>
                   <label
                     htmlFor="unit"
-                    className="block text-sm font-medium text-gray-300 mb-2"
+                    className="block text-sm font-medium text-green-800 mb-2"
                   >
                     Unit
                   </label>
@@ -205,7 +206,7 @@ export default function CollectorForm() {
                     name="unit"
                     value={formData.unit}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-100"
+                    className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900"
                   >
                     <option value="kg">Kilograms</option>
                     <option value="g">Grams</option>
@@ -214,15 +215,16 @@ export default function CollectorForm() {
                 </div>
               </div>
 
+              {/* GPS */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-green-800 mb-2">
                   GPS Coordinates *
                 </label>
                 <div className="space-y-3">
                   <button
                     type="button"
                     onClick={getCurrentLocation}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                    className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center justify-center"
                   >
                     📍 Get Current Location
                   </button>
@@ -232,7 +234,7 @@ export default function CollectorForm() {
                       name="gpsLat"
                       value={formData.gpsLat}
                       onChange={handleChange}
-                      className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-100 placeholder-gray-400"
+                      className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
                       placeholder="Latitude"
                       step="any"
                       required
@@ -242,7 +244,7 @@ export default function CollectorForm() {
                       name="gpsLng"
                       value={formData.gpsLng}
                       onChange={handleChange}
-                      className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-100 placeholder-gray-400"
+                      className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
                       placeholder="Longitude"
                       step="any"
                       required
@@ -251,28 +253,11 @@ export default function CollectorForm() {
                 </div>
               </div>
 
-              <div>
-                <label
-                  htmlFor="location"
-                  className="block text-sm font-medium text-gray-300 mb-2"
-                >
-                  Location Description
-                </label>
-                <input
-                  type="text"
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-100 placeholder-gray-400"
-                  placeholder="e.g., Village name, district"
-                />
-              </div>
-
+              {/* Notes */}
               <div>
                 <label
                   htmlFor="qualityNotes"
-                  className="block text-sm font-medium text-gray-300 mb-2"
+                  className="block text-sm font-medium text-green-800 mb-2"
                 >
                   Quality Notes
                 </label>
@@ -282,7 +267,7 @@ export default function CollectorForm() {
                   value={formData.qualityNotes}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-100 placeholder-gray-400"
+                  className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
                   placeholder="Note any observations about quality, appearance, etc."
                 />
               </div>
@@ -290,7 +275,7 @@ export default function CollectorForm() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center"
               >
                 {submitting ? (
                   <>
@@ -305,7 +290,7 @@ export default function CollectorForm() {
               <button
                 type="button"
                 onClick={() => navigate("/")}
-                className="w-full bg-gray-700 hover:bg-gray-600 text-gray-300 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                className="w-full bg-green-100 hover:bg-green-200 text-green-900 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
               >
                 Cancel
               </button>

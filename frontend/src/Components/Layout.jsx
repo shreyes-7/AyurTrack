@@ -8,8 +8,12 @@ export default function Layout({ children }) {
   const isHome = location.pathname === "/" || location.pathname === "/home";
 
   return (
-    <div className={`min-h-screen flex ${isHome ? "bg-gray-900" : "bg-black"} text-gray-100`}>
-      {/* <aside className="hidden md:block w-72 p-6 bg-gradient-to-b from-slate-800 to-slate-900 border-r border-slate-700">
+    <div
+      className={`min-h-screen flex ${
+        isHome ? "bg-green-50" : "bg-green-100"
+      } text-green-900`}
+    >
+      {/* <aside className="hidden md:block w-72 p-6 bg-gradient-to-b from-green-200 to-green-300 border-r border-green-300">
         <Sidebar />
       </aside> */}
       <div className="flex-1 p-6">

@@ -12,6 +12,7 @@ import {
   Shield,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { assets } from "../assets/assets";
 
 const features = [
   {
@@ -67,28 +68,39 @@ const stats = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-sans">
+    <div className="min-h-screen bg-green-50 text-green-900 font-sans">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-black py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
+      <section className="relative pt-20 pb-32 overflow-hidden">
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${assets.bg_img})` }}
+        ></div>
+
+        <div className="absolute inset-0 bg-black/30 z-10"></div>
+
+        <div className="relative z-20 max-w-7xl mx-auto px-6 text-center">
+          {/* Heading */}
           <motion.h1
-            initial={{ y: -50, opacity: 0 }}
+            initial={{ y: -30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8 }}
-            className="text-5xl md:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent"
+            className="text-5xl md:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 via-lime-400 to-green-300 bg-clip-text text-transparent leading-snug"
           >
             AyurTrack
           </motion.h1>
+
+          {/* Subtitle */}
           <motion.p
-            initial={{ y: 50, opacity: 0 }}
+            initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 1 }}
-            className="mt-4 text-lg md:text-xl text-gray-400 max-w-3xl mx-auto"
+            className="mt-4 text-lg md:text-xl text-white max-w-3xl mx-auto"
           >
             Blockchain-powered traceability for Ayurvedic herbs — from
             collection to consumer trust.
           </motion.p>
 
+          {/* CTA Button */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -97,14 +109,10 @@ export default function Home() {
           >
             <Link
               to="/dashboard"
-              className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-3xl bg-gradient-to-r from-gray-800 to-gray-900 hover:scale-105 hover:opacity-90 transition duration-300"
+              className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-3xl bg-gradient-to-r from-green-600 to-emerald-500 hover:scale-105 hover:opacity-90 transition duration-300 text-white"
             >
-              Dashboard <ArrowRight className="ml-2 w-5 h-5 text-cyan-400" />
+              Dashboard <ArrowRight className="ml-2 w-5 h-5 text-green-100" />
             </Link>
-            {/* <Link to="/consumer"
-              className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-3xl bg-gray-900 border border-gray-700 hover:border-cyan-400 hover:scale-105 transition duration-300">
-              Consumer Portal <QrCode className="ml-2 w-5 h-5 text-yellow-400" />
-            </Link> */}
           </motion.div>
 
           {/* Stats */}
@@ -117,12 +125,12 @@ export default function Home() {
             {stats.map((stat, i) => (
               <div
                 key={i}
-                className="p-4 rounded-2xl bg-gray-900/40 backdrop-blur-lg border border-gray-800 shadow-lg"
+                className="p-4 rounded-2xl bg-white/80 border border-green-200 shadow-lg"
               >
-                <div className="text-2xl font-bold text-cyan-400">
+                <div className="text-2xl font-bold text-green-700">
                   {stat.value}
                 </div>
-                <div className="mt-1 text-xs text-gray-400">{stat.label}</div>
+                <div className="mt-1 text-xs text-green-800">{stat.label}</div>
               </div>
             ))}
           </motion.div>
@@ -130,11 +138,12 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="relative bg-black py-16">
+      <section className="relative bg-green-50 py-16">
         <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-cyan-400 mb-10">
+          <h2 className="text-3xl md:text-4xl font-bold text-center bg-gradient-to-r from-emerald-600 via-lime-500 to-green-600 bg-clip-text text-transparent mb-10">
             Core Features
           </h2>
+
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f, i) => (
               <motion.div
@@ -142,14 +151,16 @@ export default function Home() {
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.2 }}
-                className="bg-gray-900/60 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-gray-800 hover:border-cyan-400 hover:scale-105 transition duration-300"
+                className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-green-200 hover:border-emerald-500 hover:scale-105 transition duration-300"
               >
                 <div className="mb-4">{f.icon}</div>
-                <h3 className="text-xl font-semibold">{f.title}</h3>
-                <p className="mt-2 text-gray-400 text-sm">{f.description}</p>
+                <h3 className="text-xl font-semibold text-green-800">
+                  {f.title}
+                </h3>
+                <p className="mt-2 text-green-700 text-sm">{f.description}</p>
                 <Link
                   to={f.link}
-                  className="mt-4 inline-flex items-center text-cyan-400 hover:text-cyan-300 font-medium"
+                  className="mt-4 inline-flex items-center text-green-700 hover:text-emerald-600 font-medium"
                 >
                   Explore <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
@@ -160,21 +171,21 @@ export default function Home() {
       </section>
 
       {/* Call-to-Action */}
-      <section className="bg-gradient-to-r from-gray-900/70 to-black/80 py-16">
+      <section className="bg-gradient-to-r from-green-100/80 to-green-200/80 py-16">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-cyan-400 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-green-800 mb-4">
             Transparency & Provenance
           </h2>
-          <p className="text-gray-400 mb-6">
+          <p className="text-green-700 mb-6">
             Empower consumers and stakeholders with blockchain-backed proof of
             provenance for every Ayurvedic herb.
           </p>
           <Link
             to="/batch"
-            className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-3xl bg-gradient-to-r from-gray-800 to-gray-900 hover:scale-105 hover:opacity-90 transition duration-300"
+            className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-3xl bg-gradient-to-r from-emerald-600 to-green-500 hover:scale-105 hover:opacity-90 transition duration-300 text-white"
           >
             Verify a QR Code{" "}
-            <ShieldCheck className="ml-2 w-5 h-5 text-yellow-400" />
+            <ShieldCheck className="ml-2 w-5 h-5 text-green-100" />
           </Link>
         </div>
       </section>
