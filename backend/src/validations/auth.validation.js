@@ -6,6 +6,17 @@ const register = {
     email: Joi.string().required().email(),
     password: Joi.string().required().custom(password),
     name: Joi.string().required(),
+    role: Joi.string().required().valid('user', 'admin', 'farmer', 'processor', 'lab', 'manufacturer'),
+    fabricOrganization: Joi.string().valid('FarmerOrg', 'ProcessorOrg', 'CollectorOrg', 'LabOrg', 'ManufacturerOrg'),
+    participantType: Joi.string().valid('farmer', 'processor', 'lab', 'manufacturer'),
+    location: Joi.object({
+      latitude: Joi.number().required().min(-90).max(90),
+      longitude: Joi.number().required().min(-180).max(180),
+      address: Joi.string().required().trim()
+    }).required(),
+    contact: Joi.string().required(),
+    certifications: Joi.array().items(Joi.string()).optional(),
+    license: Joi.string().optional(),
   }),
 };
 

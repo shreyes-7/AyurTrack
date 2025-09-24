@@ -5,16 +5,18 @@ const path = require('path');
 
 async function main() {
     try {
-        // CORRECTED PATH - Based on your actual folder structure
-        const ccpPath = path.resolve(__dirname, '..', '..', 'fabric-samples', 'test-network', 'organizations', 'peerOrganizations', 'org1.example.com', 'connection-org1.json');
-        
+        // CORRECTED PATH
+        const ccpPath = path.resolve(__dirname, '..', '..', 'fabric', 'fabric-samples', 'test-network', 'organizations', 'peerOrganizations', 'org1.example.com', 'connection-org1.json');
+
+        let ccp; // Declare ccp in the correct scope
+
         // Check if the connection profile exists
         if (!fs.existsSync(ccpPath)) {
             console.log(`Connection profile not found at: ${ccpPath}`);
             console.log('Using inline configuration instead...');
-            
-            // Use your provided connection profile as fallback
-            var ccp = {
+
+            // Use fallback configuration
+            ccp = {
                 "name": "test-network-org1",
                 "version": "1.0.0",
                 "client": {
@@ -34,15 +36,16 @@ async function main() {
                 }
             };
         } else {
-            const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
+            console.log(`Using connection profile: ${ccpPath}`);
+            ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8')); // Fixed: assign to ccp, not const ccp
         }
 
         // Create a new CA client for interacting with the CA.
         const caInfo = ccp.certificateAuthorities['ca.org1.example.com'];
         const caTLSCACerts = caInfo.tlsCACerts.pem;
-        const ca = new FabricCAServices(caInfo.url, { 
-            trustedRoots: caTLSCACerts, 
-            verify: false 
+        const ca = new FabricCAServices(caInfo.url, {
+            trustedRoots: caTLSCACerts,
+            verify: false
         }, caInfo.caName);
 
         // Create a new file system based wallet for managing identities.
@@ -54,16 +57,18 @@ async function main() {
         const identity = await wallet.get('admin');
         if (identity) {
             console.log('An identity for the admin user "admin" already exists in the wallet');
-            return;
+            console.log('Deleting existing identity to create fresh one...');
+            // Delete the existing identity to force recreation
+            await wallet.remove('admin');
         }
 
         // Enroll the admin user, and import the new identity into the wallet.
         console.log('Enrolling admin user...');
-        const enrollment = await ca.enroll({ 
-            enrollmentID: 'admin', 
-            enrollmentSecret: 'adminpw' 
+        const enrollment = await ca.enroll({
+            enrollmentID: 'admin',
+            enrollmentSecret: 'adminpw'
         });
-        
+
         const x509Identity = {
             credentials: {
                 certificate: enrollment.certificate,
@@ -72,7 +77,7 @@ async function main() {
             mspId: 'Org1MSP',
             type: 'X.509',
         };
-        
+
         await wallet.put('admin', x509Identity);
         console.log('Successfully enrolled admin user "admin" and imported it into the wallet');
 

@@ -2,7 +2,7 @@ const { Gateway, Wallets } = require('fabric-network');
 const path = require('path');
 const fs = require('fs');
 
-async function getContract(user = 'appUser', org = 'Org1') {
+async function getContract(user = 'admin', org = 'Org1') {
     try {
         console.log(`Connecting to Fabric network with user: ${user}...`);
 
@@ -11,7 +11,7 @@ async function getContract(user = 'appUser', org = 'Org1') {
 
         const identity = await wallet.get(user);
         if (!identity) {
-            throw new Error(`Identity ${user} not found in wallet. Run createIdentitiesFromCerts.js first`);
+            throw new Error(`Identity ${user} not found in wallet. Run enrollAdmin.js first`);
         }
 
         // Use connection profile path - adjust this to your actual path
@@ -22,15 +22,15 @@ async function getContract(user = 'appUser', org = 'Org1') {
         if (fs.existsSync(ccpPath)) {
             console.log(`Using connection profile: ${ccpPath}`);
             connectionProfile = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
-            
+
             // Enhance the existing connection profile for better multi-peer support
             if (connectionProfile.peers && connectionProfile.peers['peer0.org1.example.com']) {
                 // Add peer0.org2 to the connection profile for endorsement
                 const peer2TlsCertPath = path.resolve(__dirname, '..', '..', 'fabric', 'fabric-samples', 'test-network', 'organizations', 'peerOrganizations', 'org2.example.com', 'peers', 'peer0.org2.example.com', 'tls', 'ca.crt');
-                
+
                 if (fs.existsSync(peer2TlsCertPath)) {
                     const peer2TlsCert = fs.readFileSync(peer2TlsCertPath, 'utf8');
-                    
+
                     connectionProfile.peers['peer0.org2.example.com'] = {
                         url: "grpcs://localhost:9051",
                         grpcOptions: {
@@ -41,7 +41,7 @@ async function getContract(user = 'appUser', org = 'Org1') {
                             pem: peer2TlsCert
                         }
                     };
-                    
+
                     // Update channel configuration to include both peers
                     if (connectionProfile.channels && connectionProfile.channels.mychannel) {
                         connectionProfile.channels.mychannel.peers['peer0.org2.example.com'] = {
@@ -51,16 +51,16 @@ async function getContract(user = 'appUser', org = 'Org1') {
                             eventSource: false
                         };
                     }
-                    
+
                     // Update organization to include both peers
                     if (connectionProfile.organizations && connectionProfile.organizations.Org1) {
                         connectionProfile.organizations.Org1.peers.push('peer0.org2.example.com');
                     }
-                    
+
                     console.log('✓ Enhanced connection profile with Org2 peer for endorsement');
                 }
             }
-            
+
         } else {
             console.log('Connection profile not found, using dynamic certificate configuration...');
 
@@ -138,13 +138,13 @@ async function getContract(user = 'appUser', org = 'Org1') {
         }
 
         const gateway = new Gateway();
-        
+
         // Enhanced gateway options for better reliability
         await gateway.connect(connectionProfile, {
             wallet,
             identity: user,
             discovery: {
-                enabled: true,
+                enabled: true, // Keep enabled for better peer discovery
                 asLocalhost: true
             },
             eventHandlerOptions: {
@@ -165,7 +165,7 @@ async function getContract(user = 'appUser', org = 'Org1') {
 
     } catch (error) {
         console.error('❌ Error connecting to Fabric network:', error.message);
-        
+
         // Enhanced error reporting
         if (error.message.includes('No valid responses from any peers')) {
             console.error('💡 Troubleshooting tips:');
@@ -174,11 +174,15 @@ async function getContract(user = 'appUser', org = 'Org1') {
             console.error('   3. Test with CLI: peer chaincode query -C mychannel -n herbaltrace -c \'{"function":"QueryParticipants","Args":["farmer"]}\'');
             console.error('   4. Check chaincode logs: docker logs [chaincode-container-name]');
         }
-        
+
         if (error.message.includes('wallet') || error.message.includes('Identity')) {
-            console.error('💡 Identity issue: Run createIdentitiesFromCerts.js to create wallet identities');
+            console.error('💡 Identity issue: Run enrollAdmin.js to create wallet identities');
         }
-        
+
+        if (error.message.includes('access denied')) {
+            console.error('💡 Access denied: Identity may be expired. Re-run enrollAdmin.js');
+        }
+
         throw error;
     }
 }
@@ -188,11 +192,11 @@ async function testChaincode() {
     try {
         console.log('🧪 Testing chaincode connectivity...');
         const { contract, gateway } = await getContract('admin');
-        
+
         // Test with a simple read operation first
         const result = await contract.evaluateTransaction('QueryParticipants', 'farmer');
         console.log('✅ Chaincode test successful, farmers found:', JSON.parse(result.toString()).length);
-        
+
         await gateway.disconnect();
         return true;
     } catch (error) {
@@ -201,4 +205,37 @@ async function testChaincode() {
     }
 }
 
-module.exports = { getContract, testChaincode };
+// Helper function to initialize ledger (useful for setup)
+async function initializeLedger() {
+    try {
+        console.log('🚀 Initializing blockchain ledger...');
+        const { contract, gateway } = await getContract('admin');
+
+        const result = await contract.submitTransaction('InitLedger');
+        console.log('✅ Ledger initialized successfully');
+
+        await gateway.disconnect();
+        return { success: true, result: JSON.parse(result.toString()) };
+    } catch (error) {
+        console.error('❌ Failed to initialize ledger:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+// Helper function to safely disconnect gateway
+async function safeDisconnect(gateway) {
+    try {
+        if (gateway) {
+            await gateway.disconnect();
+        }
+    } catch (error) {
+        console.error('Warning: Error disconnecting gateway:', error.message);
+    }
+}
+
+module.exports = {
+    getContract,
+    testChaincode,
+    initializeLedger,
+    safeDisconnect
+};

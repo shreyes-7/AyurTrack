@@ -1,6 +1,10 @@
 const allRoles = {
   user: [],
-  admin: ['getUsers', 'manageUsers'],
+  admin: ['getUsers', 'manageUsers', 'manageBlockchain'],
+  farmer: ['getUsers', 'createBatches', 'viewOwnProfile', 'updateOwnProfile'],
+  processor: ['getUsers', 'processBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain'],
+  lab: ['getUsers', 'testBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain', 'createTestReports'],
+  manufacturer: ['getUsers', 'manufactureBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain', 'createProducts'],
 };
 
 const roles = Object.keys(allRoles);
