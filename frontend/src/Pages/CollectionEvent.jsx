@@ -1,22 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiEndpoints } from "../services/api";
 import { useSubmit } from "../hooks/useFetch";
 import { ButtonLoader } from "../Components/Loader";
 import Layout from "../Components/Layout";
 
-export default function CollectorForm() {
+export default function FarmerCollectionPage() {
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [locationStatus, setLocationStatus] = useState('idle'); // idle, loading, success, error
+  const [timestampStatus, setTimestampStatus] = useState('idle');
+  
+  // Get farmer info from session/context (this should come from authentication)
+  const [farmerInfo, setFarmerInfo] = useState(null);
+  
   const [formData, setFormData] = useState({
-    collectorName: "",
-    herbName: "",
-    harvestDate: "",
+    // User inputs
+    species: "",
+    quantity: "",
+    moistureLevel: "",
+    pesticidePPM: "",
+    qualityNotes: "",
+    
+    // Auto-generated fields (backend will generate these)
+    batchId: "",
+    collectionId: "",
+    collectorId: "",
     gpsLat: "",
     gpsLng: "",
+    timestamp: "",
+    
+    // Additional fields
     location: "",
-    qualityNotes: "",
-    quantity: "",
-    unit: "kg",
+    unit: "kg"
   });
 
   const { submit, submitting, error, success } = useSubmit(
@@ -24,10 +40,26 @@ export default function CollectorForm() {
     {
       onSuccess: (result) => {
         console.log("Collection event created:", result);
-        navigate("/dashboard");
+        setTimeout(() => navigate("/dashboard"), 2000);
       },
     }
   );
+
+  // Simulate getting farmer info from authentication context
+  useEffect(() => {
+    // In real implementation, this would come from your auth context/JWT token
+    const mockFarmerInfo = {
+      id: "F266201K3X", // Example farmer ID following your pattern
+      name: "Ram Kumar Farmer",
+      blockchainUserId: "F266201K3X",
+      mspId: "Org1MSP"
+    };
+    setFarmerInfo(mockFarmerInfo);
+    setFormData(prev => ({
+      ...prev,
+      collectorId: mockFarmerInfo.blockchainUserId
+    }));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -38,6 +70,8 @@ export default function CollectorForm() {
   };
 
   const getCurrentLocation = () => {
+    setLocationStatus('loading');
+    
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -46,254 +80,624 @@ export default function CollectorForm() {
             gpsLat: position.coords.latitude.toString(),
             gpsLng: position.coords.longitude.toString(),
           }));
+          setLocationStatus('success');
+          
+          // Optional: Reverse geocoding for location name
+          if (position.coords.latitude && position.coords.longitude) {
+            setFormData(prev => ({
+              ...prev,
+              location: `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`
+            }));
+          }
         },
         (error) => {
           console.error("Error getting location:", error);
-          alert(
-            "Unable to get your location. Please enter coordinates manually."
-          );
+          setLocationStatus('error');
+          alert("Unable to get your location. Please enter coordinates manually.");
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
         }
       );
     } else {
+      setLocationStatus('error');
       alert("Geolocation is not supported by this browser.");
     }
   };
 
+  const getCurrentTimestamp = () => {
+    setTimestampStatus('loading');
+    setTimeout(() => {
+      const currentTimestamp = new Date().toISOString();
+      setFormData(prev => ({
+        ...prev,
+        timestamp: currentTimestamp
+      }));
+      setTimestampStatus('success');
+    }, 500);
+  };
+
+  const validateStep = (step) => {
+    switch (step) {
+      case 1:
+        return formData.species && formData.quantity;
+      case 2:
+        return formData.moistureLevel && formData.pesticidePPM;
+      case 3:
+        return formData.gpsLat && formData.gpsLng && formData.timestamp;
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(prev + 1, 3));
+    } else {
+      alert("Please fill in all required fields for this step.");
+    }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (
-      !formData.collectorName ||
-      !formData.herbName ||
-      !formData.harvestDate
-    ) {
+    
+    if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
       alert("Please fill in all required fields");
       return;
     }
 
-    if (!formData.gpsLat || !formData.gpsLng) {
-      alert("Please provide GPS coordinates");
+    if (!farmerInfo?.blockchainUserId) {
+      alert("Farmer authentication required");
       return;
     }
 
+    // Prepare data in the format expected by the chaincode
     const submissionData = {
-      ...formData,
-      gpsLat: parseFloat(formData.gpsLat),
-      gpsLng: parseFloat(formData.gpsLng),
-      quantity: parseFloat(formData.quantity) || 0,
-      timestamp: new Date().toISOString(),
+      collectorId: farmerInfo.blockchainUserId,
+      lat: parseFloat(formData.gpsLat),
+      long: parseFloat(formData.gpsLng),
+      timestamp: formData.timestamp,
+      species: formData.species,
+      quantity: parseFloat(formData.quantity),
+      quality: {
+        moisture: parseFloat(formData.moistureLevel),
+        pesticidePPM: parseFloat(formData.pesticidePPM)
+      },
+      qualityNotes: formData.qualityNotes,
+      unit: formData.unit
     };
 
+    console.log("Submitting collection data:", submissionData);
     await submit(submissionData);
   };
 
   return (
     <Layout>
-      <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-green-50">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-xl shadow-2xl border border-green-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
-              <h2 className="text-2xl font-bold text-white text-center">
-                🌿 Herb Collection Form
-              </h2>
-              <p className="text-green-100 text-center mt-1">
-                Record your herb collection data
-              </p>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Header Section */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mb-4">
+              <span className="text-2xl">🌾</span>
+            </div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+              Herb Collection Portal
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Create a new herb batch with precise quality parameters and automated blockchain tracking
+            </p>
+            
+            {farmerInfo && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg inline-block">
+                <div className="text-sm text-blue-800">
+                  <strong>Logged in as:</strong> {farmerInfo.name} 
+                  <span className="ml-2 font-mono text-xs">({farmerInfo.blockchainUserId})</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Progress Indicator */}
+          <div className="mb-8">
+            <div className="flex items-center justify-center space-x-4">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex items-center">
+                  <div className={`
+                    w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium
+                    ${currentStep >= step 
+                      ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white' 
+                      : 'bg-gray-200 text-gray-500'
+                    }
+                  `}>
+                    {step}
+                  </div>
+                  {step < 3 && (
+                    <div className={`
+                      w-16 h-1 mx-2
+                      ${currentStep > step ? 'bg-gradient-to-r from-green-500 to-blue-500' : 'bg-gray-200'}
+                    `} />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-center mt-4 space-x-8">
+              <span className="text-sm font-medium text-gray-600">Basic Info</span>
+              <span className="text-sm font-medium text-gray-600">Quality Parameters</span>
+              <span className="text-sm font-medium text-gray-600">Location & Review</span>
+            </div>
+          </div>
+
+          {/* Main Form Card */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            {/* Farmer Info Banner */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white text-sm">
+                <div>
+                  <span className="font-medium">Farmer ID:</span>
+                  <div className="font-mono">{farmerInfo?.blockchainUserId || 'Loading...'}</div>
+                </div>
+                <div>
+                  <span className="font-medium">Organization:</span>
+                  <div className="font-mono">{farmerInfo?.mspId || 'Loading...'}</div>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-blue-100">
+                Batch and Collection IDs will be auto-generated by the blockchain system
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {error && (
-                <div className="bg-red-100 border border-red-400 rounded-lg p-4">
-                  <p className="text-red-700 text-sm">{error}</p>
-                </div>
-              )}
-
-              {success && (
-                <div className="bg-green-100 border border-green-400 rounded-lg p-4">
-                  <p className="text-green-700 text-sm">
-                    Collection data submitted successfully!
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <label
-                  htmlFor="collectorName"
-                  className="block text-sm font-medium text-green-800 mb-2"
-                >
-                  Collector Name *
-                </label>
-                <input
-                  type="text"
-                  id="collectorName"
-                  name="collectorName"
-                  value={formData.collectorName}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
-                  placeholder="Enter your full name"
-                  required
-                />
+            {/* Error/Success Messages */}
+            {error && (
+              <div className="mx-6 mt-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+                <span className="text-red-600 text-2xl mr-3">⚠️</span>
+                <div className="text-red-800">{error}</div>
               </div>
+            )}
 
-              <div>
-                <label
-                  htmlFor="herbName"
-                  className="block text-sm font-medium text-green-800 mb-2"
-                >
-                  Herb Name *
-                </label>
-                <input
-                  type="text"
-                  id="herbName"
-                  name="herbName"
-                  value={formData.herbName}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
-                  placeholder="e.g., Ashwagandha, Turmeric"
-                  required
-                />
+            {success && (
+              <div className="mx-6 mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
+                <span className="text-green-600 text-2xl mr-3">✅</span>
+                <div className="text-green-800">Collection data submitted successfully to blockchain!</div>
               </div>
+            )}
 
-              <div>
-                <label
-                  htmlFor="harvestDate"
-                  className="block text-sm font-medium text-green-800 mb-2"
-                >
-                  Harvest Date *
-                </label>
-                <input
-                  type="date"
-                  id="harvestDate"
-                  name="harvestDate"
-                  value={formData.harvestDate}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900"
-                  max={new Date().toISOString().split("T")[0]}
-                  required
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="p-6">
+              {/* Step 1: Basic Information */}
+              {currentStep === 1 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                    <span className="text-green-600 mr-2">🌿</span>
+                    Basic Collection Information
+                  </h2>
 
-              {/* Quantity & Unit */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="quantity"
-                    className="block text-sm font-medium text-green-800 mb-2"
-                  >
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    id="quantity"
-                    name="quantity"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
-                    placeholder="0"
-                    min="0"
-                    step="0.1"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="unit"
-                    className="block text-sm font-medium text-green-800 mb-2"
-                  >
-                    Unit
-                  </label>
-                  <select
-                    id="unit"
-                    name="unit"
-                    value={formData.unit}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900"
-                  >
-                    <option value="kg">Kilograms</option>
-                    <option value="g">Grams</option>
-                    <option value="tons">Tons</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* GPS */}
-              <div>
-                <label className="block text-sm font-medium text-green-800 mb-2">
-                  GPS Coordinates *
-                </label>
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={getCurrentLocation}
-                    className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center justify-center"
-                  >
-                    📍 Get Current Location
-                  </button>
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Species Input (Text Field) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Herb Species Name *
+                    </label>
                     <input
-                      type="number"
-                      name="gpsLat"
-                      value={formData.gpsLat}
+                      type="text"
+                      name="species"
+                      value={formData.species}
                       onChange={handleChange}
-                      className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
-                      placeholder="Latitude"
-                      step="any"
-                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      placeholder="Enter herb species name (e.g., Ashwagandha, Tulsi, Amla, Turmeric, Neem)"
                     />
-                    <input
-                      type="number"
-                      name="gpsLng"
-                      value={formData.gpsLng}
+                    <div className="mt-1 text-sm text-gray-500">
+                      Enter the exact name of the herb species you are collecting
+                    </div>
+                  </div>
+
+                  {/* Quantity Input */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Quantity *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          name="quantity"
+                          value={formData.quantity}
+                          onChange={handleChange}
+                          step="0.1"
+                          min="0"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          placeholder="Enter quantity (e.g., 50.5)"
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                          <span className="text-gray-500 text-sm">{formData.unit}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Unit
+                      </label>
+                      <select
+                        name="unit"
+                        value={formData.unit}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      >
+                        <option value="kg">Kilograms (kg)</option>
+                        <option value="g">Grams (g)</option>
+                        <option value="tons">Tons</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Collection Preview */}
+                  {formData.species && formData.quantity && (
+                    <div className="p-4 rounded-lg border-l-4 border-blue-500 bg-blue-50">
+                      <div className="flex items-center">
+                        <span className="text-3xl mr-4">🌿</span>
+                        <div>
+                          <h3 className="font-semibold text-gray-800">{formData.species}</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Quantity: <span className="font-medium">{formData.quantity} {formData.unit}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Quality Parameters */}
+              {currentStep === 2 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                    <span className="text-blue-600 mr-2">🔬</span>
+                    Quality Parameters
+                  </h2>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Moisture Level */}
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-lg border border-blue-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <span className="flex items-center">
+                          💧 Moisture Level *
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          name="moistureLevel"
+                          value={formData.moistureLevel}
+                          onChange={handleChange}
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          placeholder="e.g., 8.5"
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                          <span className="text-gray-500 text-sm">%</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-600">
+                        Optimal range: 8-12% for most herbs
+                      </div>
+                    </div>
+
+                    {/* Pesticide PPM */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <span className="flex items-center">
+                          🧪 Pesticide PPM *
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          name="pesticidePPM"
+                          value={formData.pesticidePPM}
+                          onChange={handleChange}
+                          step="0.1"
+                          min="0"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                          placeholder="e.g., 1.2"
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                          <span className="text-gray-500 text-sm">ppm</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-600">
+                        Lower is better. Target: &lt;2.0 ppm
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quality Indicator */}
+                  {formData.moistureLevel && formData.pesticidePPM && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <h3 className="font-semibold text-gray-800 mb-4">Quality Assessment</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                          <span className="text-sm font-medium">Moisture Level</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            parseFloat(formData.moistureLevel) <= 12 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {parseFloat(formData.moistureLevel) <= 12 ? 'Optimal' : 'High'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                          <span className="text-sm font-medium">Pesticide Level</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            parseFloat(formData.pesticidePPM) <= 2 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {parseFloat(formData.pesticidePPM) <= 2 ? 'Safe' : 'High'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quality Notes */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Additional Quality Notes (Optional)
+                    </label>
+                    <textarea
+                      name="qualityNotes"
+                      value={formData.qualityNotes}
                       onChange={handleChange}
-                      className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
-                      placeholder="Longitude"
-                      step="any"
-                      required
+                      rows={4}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      placeholder="Any additional observations about the herb quality, appearance, or special handling requirements..."
                     />
                   </div>
                 </div>
+              )}
+
+              {/* Step 3: Location & Timestamp */}
+              {currentStep === 3 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                    <span className="text-purple-600 mr-2">📍</span>
+                    Location & Timestamp
+                  </h2>
+
+                  {/* GPS Coordinates */}
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      GPS Coordinates *
+                    </label>
+                    
+                    <div className="flex flex-col md:flex-row gap-4 mb-4">
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 mb-1">Latitude</label>
+                        <input
+                          type="text"
+                          name="gpsLat"
+                          value={formData.gpsLat}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                          placeholder="Latitude"
+                          readOnly={locationStatus === 'loading'}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 mb-1">Longitude</label>
+                        <input
+                          type="text"
+                          name="gpsLng"
+                          value={formData.gpsLng}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                          placeholder="Longitude"
+                          readOnly={locationStatus === 'loading'}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={getCurrentLocation}
+                      disabled={locationStatus === 'loading'}
+                      className={`
+                        w-full md:w-auto px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center
+                        ${locationStatus === 'loading'
+                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                          : locationStatus === 'success'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                        }
+                      `}
+                    >
+                      {locationStatus === 'loading' && (
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      )}
+                      {locationStatus === 'loading' ? 'Getting Location...' :
+                       locationStatus === 'success' ? '✓ Location Captured' :
+                       '📍 Capture Current Location'}
+                    </button>
+
+                    {formData.location && (
+                      <div className="mt-3 p-3 bg-white rounded-lg border border-purple-200">
+                        <div className="text-sm text-gray-600">
+                          <strong>Coordinates:</strong> {formData.location}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Timestamp */}
+                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 rounded-lg border border-orange-200">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Collection Timestamp *
+                    </label>
+                    
+                    <div className="flex flex-col md:flex-row gap-4 mb-4">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          name="timestamp"
+                          value={formData.timestamp}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                          placeholder="ISO timestamp will be auto-generated"
+                          readOnly={timestampStatus === 'loading'}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={getCurrentTimestamp}
+                      disabled={timestampStatus === 'loading'}
+                      className={`
+                        w-full md:w-auto px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center
+                        ${timestampStatus === 'loading'
+                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                          : timestampStatus === 'success'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                        }
+                      `}
+                    >
+                      {timestampStatus === 'loading' ? 'Setting Timestamp...' :
+                       timestampStatus === 'success' ? '✓ Timestamp Set' :
+                       '🕒 Set Current Timestamp'}
+                    </button>
+
+                    <div className="mt-2 text-xs text-gray-600">
+                      Click to capture the current date and time in ISO format
+                    </div>
+                  </div>
+
+                  {/* Final Review */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
+                      <span className="mr-2">📋</span>
+                      Collection Summary
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Species:</span>
+                          <span className="font-medium">{formData.species || 'Not set'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Quantity:</span>
+                          <span className="font-medium">{formData.quantity ? `${formData.quantity} ${formData.unit}` : 'Not set'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Moisture:</span>
+                          <span className="font-medium">{formData.moistureLevel ? `${formData.moistureLevel}%` : 'Not set'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Pesticide PPM:</span>
+                          <span className="font-medium">{formData.pesticidePPM ? `${formData.pesticidePPM} ppm` : 'Not set'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Farmer ID:</span>
+                          <span className="font-mono text-sm">{farmerInfo?.blockchainUserId || 'Not set'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Coordinates:</span>
+                          <span className="font-mono text-sm">
+                            {formData.gpsLat && formData.gpsLng ? 'Set' : 'Not set'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Timestamp:</span>
+                          <span className="font-mono text-sm">
+                            {formData.timestamp ? 'Set' : 'Not set'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Blockchain:</span>
+                          <span className="text-green-600 text-sm">Ready for submission</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+                <div>
+                  {currentStep > 1 && (
+                    <button
+                      type="button"
+                      onClick={handlePrevious}
+                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 flex items-center"
+                    >
+                      ← Previous
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex space-x-3">
+                  {currentStep < 3 ? (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      disabled={!validateStep(currentStep)}
+                      className={`
+                        px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center
+                        ${validateStep(currentStep)
+                          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700'
+                          : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        }
+                      `}
+                    >
+                      Next →
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200"
+                      >
+                        Cancel
+                      </button>
+                      
+                      <button
+                        type="submit"
+                        disabled={submitting || !validateStep(1) || !validateStep(2) || !validateStep(3)}
+                        className={`
+                          px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center
+                          ${submitting
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-green-500 to-blue-500 text-white hover:from-green-600 hover:to-blue-600'
+                          }
+                        `}
+                      >
+                        {submitting ? (
+                          <>
+                            <ButtonLoader />
+                            Submitting to Blockchain...
+                          </>
+                        ) : (
+                          <>
+                            <span className="mr-2">⛓️</span>
+                            Submit to Blockchain
+                          </>
+                        )}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-
-              {/* Notes */}
-              <div>
-                <label
-                  htmlFor="qualityNotes"
-                  className="block text-sm font-medium text-green-800 mb-2"
-                >
-                  Quality Notes
-                </label>
-                <textarea
-                  id="qualityNotes"
-                  name="qualityNotes"
-                  value={formData.qualityNotes}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-green-900 placeholder-green-400"
-                  placeholder="Note any observations about quality, appearance, etc."
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center"
-              >
-                {submitting ? (
-                  <>
-                    <ButtonLoader />
-                    <span className="ml-2">Submitting...</span>
-                  </>
-                ) : (
-                  "🌱 Record Collection"
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/")}
-                className="w-full bg-green-100 hover:bg-green-200 text-green-900 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-              >
-                Cancel
-              </button>
             </form>
           </div>
         </div>
