@@ -10,6 +10,33 @@ const createUser = async (userBody) => {
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
+  const generatePassword = () => {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const symbols = "!@#$%^&*()_+[]{}|;:,.<>?";
+
+    // Random length between 8 and 12
+    const length = Math.floor(Math.random() * (12 - 8 + 1)) + 8;
+
+    // Ensure at least one letter and one number
+    let password = '';
+    password += letters.charAt(Math.floor(Math.random() * letters.length));
+    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+
+    const allChars = letters + numbers + symbols;
+    for (let i = 2; i < length; i++) {
+      password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+    }
+
+    // Shuffle password to avoid predictable pattern
+    password = password.split('').sort(() => 0.5 - Math.random()).join('');
+
+    return password;
+  };
+
+
+  const generatedPassword = generatePassword();
+  userBody.password = generatedPassword;
 
   // Validate required fields for blockchain participants
   if (userBody.participantType !== 'user') {
@@ -26,6 +53,18 @@ const createUser = async (userBody) => {
 
   // Create user in MongoDB
   const user = await User.create(userBody);
+  
+  const subject = "Your Account is Created!";
+  const html = `
+  <p>Hi ${user.name},</p>
+  <p>Your account has been created by the admin.</p>
+  <p><strong>Email:</strong> ${user.email}</p>
+  <p><strong>Password:</strong> ${password}</p> 
+  <p>Cheers,<br/>Team, AyurTrace</p>
+`;
+
+  await sendMail(user.email, subject, html);
+
 
   // Attempt blockchain enrollment for supply chain participants
   if (userBody.participantType !== 'user' && userBody.fabricOrganization) {
