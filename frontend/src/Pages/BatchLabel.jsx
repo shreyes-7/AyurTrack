@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiEndpoints } from "../services/api";
-import { useSubmit } from "../hooks/useFetch";
 import { ButtonLoader } from "../Components/Loader";
 import Layout from "../Components/Layout";
 import QRCodeDisplay from "../Components/QRCodeDisplay";
@@ -93,19 +91,6 @@ export default function ManufacturerBatchPage() {
     notes: "",
   });
 
-  const {
-    submit: submitQRGeneration,
-    submitting: submittingQR,
-    error: errorQR,
-    success: successQR,
-  } = useSubmit(apiEndpoints.generateBatchQR, {
-    onSuccess: (result) => {
-      console.log("QR Code generated:", result);
-      setQrGenerated(true);
-      setTimeout(() => navigate("/dashboard"), 3000);
-    },
-  });
-
   useEffect(() => {
     const mockManufacturerInfo = {
       id: "M266201K3X",
@@ -128,7 +113,7 @@ export default function ManufacturerBatchPage() {
       manufacturerId: mockManufacturerInfo.blockchainUserId,
       productBatchId: productBatchId,
       consumerUrl: consumerUrl,
-      qrToken: consumerUrl,
+      qrToken: "",
     }));
   }, []);
 
@@ -144,7 +129,7 @@ export default function ManufacturerBatchPage() {
       setFormData((prev) => ({
         ...prev,
         consumerUrl: consumerUrl,
-        qrToken: consumerUrl,
+        qrToken: "",
       }));
     }
   };
@@ -215,125 +200,140 @@ export default function ManufacturerBatchPage() {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleSubmitFormulation = async (e) => {
-    e.preventDefault();
+const handleSubmitFormulation = async (e) => {
+  e.preventDefault();
+  
+  // Validate all steps first
+  if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
+    alert('Please fill in all required fields');
+    return;
+  }
 
-    if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
-      alert("Please fill in all required fields");
-      return;
-    }
+  if (!manufacturerInfo?.blockchainUserId) {
+    alert('Manufacturer authentication required');
+    return;
+  }
 
-    if (!manufacturerInfo?.blockchainUserId) {
-      alert("Manufacturer authentication required");
-      return;
-    }
+  setIsSubmitting(true);
+  setSubmitStatus(null);
 
-    setIsSubmitting(true);
-    setSubmitStatus(null);
-
-    try {
-      const formulationParams = {
-        product_type: formData.productType,
-        dosage: formData.dosage,
-        batch_size: `${formData.batchSize}_units`,
-      };
-
-      if (formData.excipients) {
-        formulationParams.excipients = formData.excipients
-          .split(",")
-          .map((e) => e.trim())
-          .filter((e) => e);
-      }
-
-      if (formData.formulaRatio) {
-        try {
-          formulationParams.formula_ratio = JSON.parse(formData.formulaRatio);
-        } catch (e) {
-          alert(
-            'Invalid formula ratio format. Please use JSON format like: {"Ashwagandha": "40%", "Tulsi": "30%"}'
-          );
-          return;
-        }
-      }
-
-      if (formData.productType === "tablets" && formData.tabletWeight) {
-        formulationParams.tablet_weight = formData.tabletWeight;
-      }
-
-      if (formData.productName)
-        formulationParams.product_name = formData.productName;
-      if (formData.description)
-        formulationParams.description = formData.description;
-      if (formData.shelfLife) formulationParams.shelf_life = formData.shelfLife;
-      if (formData.storageConditions)
-        formulationParams.storage_conditions = formData.storageConditions;
-      if (formData.packagingType)
-        formulationParams.packaging_type = formData.packagingType;
-      if (formData.notes) formulationParams.notes = formData.notes;
-
-      const inputBatches = formData.inputBatches
-        .split(",")
-        .map((b) => b.trim())
-        .filter((b) => b);
-
-      const submissionData = {
-        productBatchId: formData.productBatchId,
-        manufacturerId: manufacturerInfo.blockchainUserId,
-        inputBatches: JSON.stringify(inputBatches),
-        formulationParams: JSON.stringify(formulationParams),
-        timestamp: formData.timestamp,
-        consumerUrl: formData.consumerUrl,
-      };
-
-      console.log("Submitting formulation data:", submissionData);
-
-      const response = await axios.post(
-        `${BASE_URL}/formulations`,
-        submissionData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      console.log("Formulation submitted successfully:", response.data);
-      setSubmitStatus({
-        type: "success",
-        message: "Formulation created successfully! Generating QR code...",
-      });
-
-      generateQRCode(response.data.productBatchId || formData.productBatchId);
-    } catch (error) {
-      console.error("Error submitting formulation:", error);
-      setSubmitStatus({
-        type: "error",
-        message:
-          error.response?.data?.message ||
-          "Failed to submit formulation. Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const generateQRCode = async (productBatchId) => {
-    const consumerUrl = `${BASE_URL}/consumer/product/${productBatchId}`;
-
-    const qrData = {
-      productBatchId: productBatchId,
-      consumerUrl: consumerUrl,
+  try {
+    // Build formulation parameters properly
+    const formulationParams = {
+      producttype: formData.productType,
+      dosage: formData.dosage,
+      batchsize: parseInt(formData.batchSize), // Fixed: convert to integer
     };
 
-    setFormData((prev) => ({
-      ...prev,
-      qrToken: consumerUrl,
-      consumerUrl: consumerUrl,
-    }));
+    // Add excipients if provided
+    if (formData.excipients && formData.excipients.trim()) {
+      formulationParams.excipients = formData.excipients
+        .split(',')
+        .map(e => e.trim())
+        .filter(e => e);
+    }
 
-    console.log("Generating QR code:", qrData);
-    await submitQRGeneration(qrData);
-  };
+    // Add formula ratio if provided (fix JSON parsing)
+    if (formData.formulaRatio && formData.formulaRatio.trim()) {
+      try {
+        formulationParams.formularatio = JSON.parse(formData.formulaRatio);
+      } catch (e) {
+        alert('Invalid formula ratio format. Please use valid JSON format like {"Ashwagandha": 40, "Tulsi": 30}');
+        return;
+      }
+    }
+
+    // Add tablet weight for tablets
+    if (formData.productType === 'tablets' && formData.tabletWeight) {
+      formulationParams.tabletweight = formData.tabletWeight;
+    }
+
+    // Add optional fields if provided
+    if (formData.productName) formulationParams.productname = formData.productName;
+    if (formData.description) formulationParams.description = formData.description;
+    if (formData.shelfLife) formulationParams.shelflife = formData.shelfLife;
+    if (formData.storageConditions) formulationParams.storageconditions = formData.storageConditions;
+    if (formData.packagingType) formulationParams.packagingtype = formData.packagingType;
+    if (formData.notes) formulationParams.notes = formData.notes;
+
+    // Parse input batches properly
+    const inputBatches = formData.inputBatches
+      .split(',')
+      .map(b => b.trim())
+      .filter(b => b);
+
+    if (inputBatches.length === 0) {
+      alert('Please provide at least one input batch');
+      return;
+    }
+
+    // Build submission data with correct structure
+    const submissionData = {
+      productBatchId: formData.productBatchId,
+      manufacturerId: manufacturerInfo.blockchainUserId,
+      inputBatches: JSON.stringify(inputBatches),
+      formulationParams: JSON.stringify(formulationParams),
+      timestamp: formData.timestamp
+    };
+
+    console.log('Submitting formulation data:', submissionData);
+
+    // Step 1: Create formulation on blockchain
+    const response = await axios.post(`${BASE_URL}/formulations`, submissionData, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('Formulation stored successfully:', response.data);
+    setSubmitStatus({ type: 'success', message: 'Formulation created successfully! Generating QR code...' });
+
+    // Step 2: Generate QR code
+    await generateQRCode(formData.productBatchId);
+
+  } catch (error) {
+    console.error('Error submitting formulation:', error);
+    
+    // Better error handling
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        'Failed to submit formulation. Please try again.';
+    
+    setSubmitStatus({ type: 'error', message: errorMessage });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+
+  const generateQRCode = async (productBatchId) => {
+  try {
+    // Fixed: Use GET request to /:productBatchId/generate-qr
+    const response = await axios.get(`${BASE_URL}/${productBatchId}/generate-qr`);
+    
+    if (response.data) {
+      const qrToken = response.data; // Backend should return just the token string
+      setFormData(prev => ({ 
+        ...prev, 
+        qrToken: qrToken,
+        consumerUrl: `${BASE_URL}/consumer/product/${productBatchId}`
+      }));
+      setQrGenerated(true);
+      setSubmitStatus({ type: 'success', message: 'QR Code generated successfully!' });
+      console.log('QR generated:', qrToken);
+    } else {
+      throw new Error('No QR token received from server');
+    }
+  } catch (error) {
+    console.error('Error generating QR:', error);
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        'Failed to generate QR code. Please try again.';
+    setSubmitStatus({ type: 'error', message: errorMessage });
+  }
+};
+
 
   const getSelectedProductType = () =>
     PRODUCT_TYPES.find((p) => p.id === formData.productType);
@@ -442,12 +442,7 @@ export default function ManufacturerBatchPage() {
               </div>
             </div>
 
-            {errorQR && (
-              <div className="mx-6 mt-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
-                <span className="text-red-600 text-2xl mr-3">⚠️</span>
-                <div className="text-red-800">{errorQR}</div>
-              </div>
-            )}
+=======
 
             {submitStatus && (
               <div
@@ -478,14 +473,7 @@ export default function ManufacturerBatchPage() {
               </div>
             )}
 
-            {successQR && (
-              <div className="mx-6 mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
-                <span className="text-green-600 text-2xl mr-3">✅</span>
-                <div className="text-green-800">
-                  QR Code generated successfully! Redirecting...
-                </div>
-              </div>
-            )}
+=======
 
             <form onSubmit={handleSubmitFormulation} className="p-6">
               {currentStep === 1 && (
