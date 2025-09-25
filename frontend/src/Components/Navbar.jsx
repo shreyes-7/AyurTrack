@@ -30,7 +30,7 @@ const navItems = [
     icon: <FlaskConical className="w-5 h-5" />,
   },
   {
-    name: "Quality Test",
+    name: "Lab Test",
     path: "/quality",
     icon: <CheckCircle className="w-5 h-5" />,
   },
@@ -80,11 +80,13 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-green-50/80 backdrop-blur-lg border-b border-green-200 flex items-center justify-between px-6 h-16">
+      <nav className="sticky top-0 z-50 bg-gradient-to-r from-green-100 via-green-50 to-green-100 backdrop-blur-md border-b border-green-200 shadow-md flex items-center justify-between px-6 h-16">
+        {/* Logo + Mobile Menu */}
         <div className="flex items-center gap-4">
+          {/* Mobile Hamburger */}
           <button
             onClick={toggleMenu}
-            className="p-2 text-green-900 hover:text-green-600 transition-colors"
+            className="p-2 text-green-900 hover:text-green-600 transition-colors rounded-md hover:bg-green-100"
           >
             {isMenuOpen ? (
               <X className="w-6 h-6" />
@@ -92,18 +94,20 @@ export default function Navbar() {
               <Menu className="w-6 h-6" />
             )}
           </button>
+
+          {/* Logo */}
           <Link
             to="/"
-            className="flex items-center gap-2 text-green-700 font-bold text-xl"
+            className="flex items-center gap-2 text-green-700 font-bold text-xl hover:text-green-800 transition-colors"
             onClick={handleLinkClick}
           >
-            <Leaf className="w-6 h-6" />
+            <Leaf className="w-6 h-6 animate-bounce" />
             AyurTrack
           </Link>
         </div>
 
-        {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-4">
+        {/* Desktop Nav */}
+        <div className="hidden md:flex items-center gap-3">
           {navItems.map((item, i) => {
             const isActive = location.pathname === item.path;
             return (
@@ -111,17 +115,41 @@ export default function Navbar() {
                 key={i}
                 to={item.path}
                 onClick={handleLinkClick}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform ${
                   isActive
-                    ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-md"
-                    : "text-green-900 hover:text-white hover:bg-green-300 hover:scale-105 hover:shadow-lg"
+                    ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-lg scale-105"
+                    : "text-green-900 hover:text-white hover:bg-green-400 hover:scale-105 hover:shadow-md"
                 }`}
               >
+                {item.icon && (
+                  <span className="hidden md:inline-flex w-5 h-5">
+                    {item.icon}
+                  </span>
+                )}
                 {item.name}
               </NavLink>
             );
           })}
         </div>
+
+        {/* Mobile Menu Slide */}
+        {isMenuOpen && (
+          <div className="absolute top-16 left-0 w-full bg-white/80 backdrop-blur-md border-t border-green-200 md:hidden flex flex-col items-start p-4 gap-2 shadow-lg animate-slideDown">
+            {navItems.map((item, i) => (
+              <NavLink
+                key={i}
+                to={item.path}
+                onClick={() => {
+                  handleLinkClick();
+                  toggleMenu();
+                }}
+                className={`w-full px-4 py-2 rounded-lg text-green-900 hover:text-white hover:bg-green-400 transition-all duration-200`}
+              >
+                {item.name}
+              </NavLink>
+            ))}
+          </div>
+        )}
       </nav>
 
       {/* Sidebar / Mobile menu */}
