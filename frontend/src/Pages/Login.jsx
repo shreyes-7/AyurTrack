@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, Leaf, ArrowRight, Shield, Sparkles } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../App'; // Import from your main App file
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -49,18 +53,68 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    
     setIsLoading(true);
+    setErrors({});
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Login data:', formData);
-      navigate('/dashboard');
+      // Replace with your actual API endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Use the login function from AuthContext to store user data and tokens
+        login(data.user, data.tokens);
+        
+        // Get the intended destination from location state or redirect based on role
+        const from = location.state?.from?.pathname || getDashboardRoute(data.user.role);
+        navigate(from, { replace: true });
+      } else {
+        // Handle different types of errors from the API
+        if (data.errors && Array.isArray(data.errors)) {
+          // If API returns field-specific errors
+          const fieldErrors = {};
+          data.errors.forEach(error => {
+            if (error.field) {
+              fieldErrors[error.field] = error.message;
+            }
+          });
+          setErrors(fieldErrors.email || fieldErrors.password ? fieldErrors : { general: data.message || 'Login failed' });
+        } else {
+          setErrors({ general: data.message || 'Invalid email or password' });
+        }
+      }
     } catch (error) {
       console.error('Login error:', error);
-      setErrors({ general: 'Login failed. Please try again.' });
+      setErrors({ general: 'Network error. Please check your connection and try again.' });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Redirect user to appropriate dashboard based on their role
+  const getDashboardRoute = (role) => {
+    const dashboards = {
+      farmer: '/dashboard',
+      manufacturer: '/dashboard',
+      processor: '/dashboard',
+      admin: '/admin-dashboard',
+      quality_controller: '/dashboard',
+      distributor: '/dashboard',
+      retailer: '/dashboard',
+      consumer: '/consumer'
+    };
+    return dashboards[role] || '/dashboard';
   };
 
   const togglePasswordVisibility = () => {
@@ -199,6 +253,7 @@ const Login = () => {
                         className={`glass-input block w-full pl-12 pr-4 py-4 rounded-2xl text-slate-900 focus:outline-none ${
                           errors.email ? 'border-red-400 bg-red-50/70' : ''
                         }`}
+                        disabled={isLoading}
                       />
                     </div>
                     {errors.email && (
@@ -230,11 +285,13 @@ const Login = () => {
                         className={`glass-input block w-full pl-12 pr-14 py-4 rounded-2xl text-slate-900 focus:outline-none ${
                           errors.password ? 'border-red-400 bg-red-50/70' : ''
                         }`}
+                        disabled={isLoading}
                       />
                       <button
                         type="button"
                         onClick={togglePasswordVisibility}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-emerald-500 transition-colors duration-200"
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-emerald-500 transition-colors duration-200 disabled:opacity-50"
+                        disabled={isLoading}
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
@@ -244,11 +301,18 @@ const Login = () => {
                     )}
                   </div>
 
+                  {/* Remember redirect info */}
+                  {location.state?.from && (
+                    <div className="text-xs text-slate-600 bg-blue-50/70 p-3 rounded-xl border border-blue-200">
+                      You'll be redirected to {location.state.from.pathname} after login
+                    </div>
+                  )}
+
                   {/* Button */}
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="group relative w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-lg transform transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group relative w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-lg transform transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {isLoading ? (
                       <>
@@ -263,10 +327,32 @@ const Login = () => {
                     )}
                   </button>
                 </form>
+
+                {/* Development helper */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="mt-6 p-4 bg-gray-100/70 rounded-2xl border border-gray-200">
+                    <p className="text-xs text-gray-600 mb-2">Development Login:</p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ email: 'farmer1@example.com', password: 'password123' })}
+                        className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                      >
+                        Farmer Login
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ email: 'admin@example.com', password: 'password123' })}
+                        className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                      >
+                        Admin Login
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>

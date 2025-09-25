@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Leaf,
   Menu,
@@ -14,30 +14,87 @@ import {
   User,
   ChevronDown,
   LogOut,
+  Plus,
+  UserPlus,
+  ShoppingCart,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-/* Nav items */
-const navItems = [
-  { name: "Home", path: "/", icon: <LayoutDashboard className="w-5 h-5" /> },
-  { name: "Collection", path: "/collection", icon: <Leaf className="w-5 h-5" /> },
-  { name: "Processing", path: "/processing", icon: <FlaskConical className="w-5 h-5" /> },
-  { name: "Lab Test", path: "/quality", icon: <CheckCircle className="w-5 h-5" /> },
-  { name: "Batch", path: "/batch", icon: <Package className="w-5 h-5" /> },
-  { name: "Admin", path: "/admin", icon: <Shield className="w-5 h-5" /> },
-  { name: "About", path: "/about", icon: <Info className="w-5 h-5" /> },
-];
+import { useAuth } from '../contexts/AuthContext'; // Updated import path
 
 export default function Navbar() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const sidebarRef = useRef(null);
   const profileRef = useRef(null);
 
-  // Mock auth - replace with your actual auth logic
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState({ name: "Abhinav Pandey", role: "Operator" });
+  // Use authentication context
+  const { user, isAuthenticated, logout, hasRole } = useAuth();
+
+  // Define role-based navigation items (removed Track Product/Consumer Portal)
+  const getNavItems = () => {
+    if (!isAuthenticated()) {
+      // Public navigation for unauthenticated users
+      return [
+        { name: "Home", path: "/", icon: <LayoutDashboard className="w-5 h-5" />, roles: [] },
+        { name: "About", path: "/about", icon: <Info className="w-5 h-5" />, roles: [] },
+      ];
+    }
+
+    // Base navigation items for authenticated users
+    const navItems = [
+      { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" />, roles: ["farmer", "manufacturer", "processor", "distributor", "retailer", "admin", "quality_controller"] },
+    ];
+
+    // Role-specific navigation items
+    if (hasRole(['farmer'])) {
+      navItems.push(
+        { name: "Collection", path: "/collection", icon: <Leaf className="w-5 h-5" />, roles: ["farmer"] },
+        { name: "Add Herb", path: "/add-herb", icon: <Plus className="w-5 h-5" />, roles: ["farmer"] }
+      );
+    }
+
+    if (hasRole(['manufacturer', 'processor'])) {
+      navItems.push(
+        { name: "Processing", path: "/processing", icon: <FlaskConical className="w-5 h-5" />, roles: ["manufacturer", "processor"] },
+        { name: "Batch", path: "/batch", icon: <Package className="w-5 h-5" />, roles: ["manufacturer", "processor"] }
+      );
+    }
+
+    if (hasRole(['manufacturer', 'processor', 'quality_controller'])) {
+      navItems.push(
+        { name: "Lab Test", path: "/quality", icon: <CheckCircle className="w-5 h-5" />, roles: ["manufacturer", "processor", "quality_controller"] }
+      );
+    }
+
+    if (hasRole(['distributor', 'retailer'])) {
+      navItems.push(
+        { name: "Inventory", path: "/inventory", icon: <ShoppingCart className="w-5 h-5" />, roles: ["distributor", "retailer"] }
+      );
+    }
+
+    if (hasRole(['admin'])) {
+      navItems.push(
+        { name: "Admin", path: "/admin", icon: <Shield className="w-5 h-5" />, roles: ["admin"] },
+        { name: "Create User", path: "/create-user", icon: <UserPlus className="w-5 h-5" />, roles: ["admin"] }
+      );
+    }
+
+    // Common items for all authenticated users (removed Track Product)
+    navItems.push(
+      { name: "About", path: "/about", icon: <Info className="w-5 h-5" />, roles: ["farmer", "manufacturer", "processor", "distributor", "retailer", "admin", "quality_controller", "consumer"] }
+    );
+
+    return navItems;
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsProfileOpen(false);
+    setIsSidebarOpen(false);
+    navigate('/login');
+  };
 
   useEffect(() => {
     // close sidebar/profile on route change
@@ -81,6 +138,9 @@ export default function Navbar() {
     exit: { y: -6, opacity: 0, scale: 0.98, transition: { duration: 0.1 } },
   };
 
+  // Get filtered navigation items based on authentication and roles
+  const navigationItems = getNavItems();
+
   return (
     <>
       <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-200 shadow-sm">
@@ -110,7 +170,7 @@ export default function Navbar() {
 
             {/* Center: Desktop nav (minimal) */}
             <div className="hidden md:flex items-center gap-3">
-              {navItems.map((item, idx) => (
+              {navigationItems.slice(0, 5).map((item, idx) => (
                 <NavLink
                   key={idx}
                   to={item.path}
@@ -131,7 +191,7 @@ export default function Navbar() {
             {/* Right: Auth */}
             <div className="flex items-center gap-3">
               <div className="relative" ref={profileRef}>
-                {isAuthenticated ? (
+                {isAuthenticated() ? (
                   <>
                     <button
                       onClick={() => setIsProfileOpen((s) => !s)}
@@ -139,11 +199,12 @@ export default function Navbar() {
                       aria-expanded={isProfileOpen}
                       className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm hover:shadow-md transition"
                     >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white">
-                        <User className="w-4 h-4" />
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-xs font-semibold">
+                        {user?.name?.charAt(0)?.toUpperCase() || <User className="w-4 h-4" />}
                       </div>
                       <div className="hidden sm:flex flex-col items-start leading-tight">
-                        <span className="text-sm font-medium text-slate-800">{user.name}</span>
+                        <span className="text-sm font-medium text-slate-800">{user?.name || 'User'}</span>
+                        <span className="text-xs text-slate-500 capitalize">{user?.role || 'User'}</span>
                       </div>
                       <ChevronDown className={`w-4 h-4 text-slate-500 transition ${isProfileOpen ? "rotate-180" : ""}`} />
                     </button>
@@ -155,22 +216,40 @@ export default function Navbar() {
                           animate="visible"
                           exit="exit"
                           variants={profileMenuVariants}
-                          className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-md shadow-lg py-2 z-50"
+                          className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-md shadow-lg py-2 z-50"
                         >
-                          <Link to="/profile" onClick={() => setIsProfileOpen(false)} className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                          <div className="px-3 py-2 border-b border-slate-100">
+                            <p className="text-sm font-medium text-slate-900">{user?.name}</p>
+                            <p className="text-xs text-slate-500">{user?.email}</p>
+                            <p className="text-xs text-emerald-600 capitalize">{user?.role}</p>
+                          </div>
+
+                          <Link 
+                            to="/profile" 
+                            onClick={() => setIsProfileOpen(false)} 
+                            className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                          >
                             <div className="flex items-center gap-2">
                               <User className="w-4 h-4 text-slate-500" />
-                              <span>Profile</span>
+                              <span>Profile Settings</span>
                             </div>
                           </Link>
 
-                          
+                          {hasRole(['admin']) && (
+                            <Link 
+                              to="/admin-dashboard" 
+                              onClick={() => setIsProfileOpen(false)} 
+                              className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Shield className="w-4 h-4 text-slate-500" />
+                                <span>Admin Panel</span>
+                              </div>
+                            </Link>
+                          )}
 
                           <button
-                            onClick={() => {
-                              setIsAuthenticated(false);
-                              setIsProfileOpen(false);
-                            }}
+                            onClick={handleLogout}
                             className="w-full text-left px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
                           >
                             <div className="flex items-center gap-2">
@@ -185,7 +264,7 @@ export default function Navbar() {
                 ) : (
                   <Link
                     to="/login"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full text-sm font-medium shadow"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full text-sm font-medium shadow transition-all duration-200 hover:scale-105"
                   >
                     <LogIn className="w-4 h-4" />
                     Sign In
@@ -202,7 +281,7 @@ export default function Navbar() {
         {isSidebarOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-slate-900/8"
+              className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -211,7 +290,7 @@ export default function Navbar() {
 
             <motion.aside
               ref={sidebarRef}
-              className="fixed top-0 left-0 h-full z-50 w-72 bg-white border-r border-slate-200 p-6 overflow-auto"
+              className="fixed top-0 left-0 h-full z-50 w-72 bg-white border-r border-slate-200 p-6 overflow-auto shadow-2xl"
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -238,7 +317,7 @@ export default function Navbar() {
               </div>
 
               <nav className="flex flex-col gap-2">
-                {navItems.map((item, idx) => (
+                {navigationItems.map((item, idx) => (
                   <NavLink
                     key={idx}
                     to={item.path}
@@ -256,37 +335,38 @@ export default function Navbar() {
               </nav>
 
               <div className="mt-6 border-t border-slate-100 pt-4">
-                {isAuthenticated ? (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white">
-                        <User className="w-5 h-5" />
+                {isAuthenticated() ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white font-semibold">
+                        {user?.name?.charAt(0)?.toUpperCase() || <User className="w-5 h-5" />}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-800">{user.name}</p>
-                        <p className="text-xs text-slate-500">{user.role}</p>
+                        <p className="text-sm font-medium text-slate-800">{user?.name || 'User'}</p>
+                        <p className="text-xs text-slate-500">{user?.email}</p>
+                        <p className="text-xs text-emerald-600 capitalize">{user?.role || 'User'}</p>
                       </div>
                     </div>
 
                     <button
                       onClick={() => {
-                        setIsAuthenticated(false);
+                        handleLogout();
                         setIsSidebarOpen(false);
                       }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-md text-rose-600 hover:bg-rose-50 transition"
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-rose-600 hover:bg-rose-50 transition w-full"
                     >
                       <LogOut className="w-4 h-4" />
-                      Sign out
+                      <span className="text-sm font-medium">Sign out</span>
                     </button>
                   </div>
                 ) : (
                   <Link
                     to="/login"
                     onClick={() => setIsSidebarOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500 text-white w-full justify-center"
+                    className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500 text-white w-full justify-center hover:bg-emerald-600 transition"
                   >
                     <LogIn className="w-4 h-4" />
-                    Sign In
+                    <span className="font-medium">Sign In</span>
                   </Link>
                 )}
               </div>
