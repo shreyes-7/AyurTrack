@@ -13,7 +13,6 @@ const ProcessingStep = lazy(() => import("./Pages/ProcessingStep"));
 const QualityTest = lazy(() => import("./Pages/QualityTest"));
 const BatchLabel = lazy(() => import("./Pages/BatchLabel"));
 const ConsumerPortal = lazy(() => import("./Pages/ConsumerPortal"));
-const Settings = lazy(() => import("./Pages/Settings"));
 const NotFound = lazy(() => import("./Pages/NotFound"));
 const AdminDashboard = lazy(() => import("./Pages/AdminDashboard"));
 const AddHerb = lazy(() => import("./Pages/AddHerb"));
@@ -37,7 +36,6 @@ export default function App() {
             <Route path="/quality" element={<QualityTest />} />
             <Route path="/batch" element={<BatchLabel />} />
             <Route path="/consumer" element={<ConsumerPortal />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/add-herb" element={<AddHerb />} />
