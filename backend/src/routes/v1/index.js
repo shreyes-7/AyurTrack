@@ -10,6 +10,7 @@ const formulationRoute = require('./formulation.route');
 const processingRoute = require('./processing.route');
 const qualityTestRoute = require('./qualityTest.route');
 const consumerRoute = require('./consumer.route');
+const smsRoute = require('./sms.route');
 const router = express.Router();
 
 const defaultRoutes = [
@@ -48,6 +49,10 @@ const defaultRoutes = [
   {
     path: '/consumer',
     route: consumerRoute,
+  },
+  {
+    path: '/sms',
+    route: smsRoute,
   }
 ];
 

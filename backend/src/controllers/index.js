@@ -7,3 +7,4 @@ module.exports.formulationController = require('./formulation.controller');
 module.exports.processingController = require('./processing.controller');
 module.exports.qualityTestController = require('./qualityTest.controller');
 module.exports.consumerController = require('./consumer.controller');
+module.exports.smsController = require('./sms.controller');

@@ -9,3 +9,4 @@ module.exports.formulationService = require('./formulation.service');
 module.exports.processingService = require('./processing.service');
 module.exports.qualityTestService = require('./qualityTest.service');
 module.exports.consumerService = require('./consumer.service');
+module.exports.smsService = require('./sms.service');

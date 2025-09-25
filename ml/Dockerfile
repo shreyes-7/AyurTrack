@@ -1,7 +1,6 @@
 # Use official Python 3.11 slim image
 FROM python:3.11-slim
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
@@ -17,21 +16,20 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Set working directory inside container
 WORKDIR /app
 
-# Copy requirements.txt first for caching
+# Copy requirements first
 COPY requirements.txt .
 
-# Upgrade pip and install Python dependencies
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r requirements.txt
 
-# Copy app code
+# Copy all files from ml/ into container /app
 COPY . .
 
-# Expose Flask port
+# Expose port
 EXPOSE 5000
 
-# Command to run your Flask app
-CMD ["python", "app.py"]
+# Run your Flask server
+CMD ["python", "server.py"]
