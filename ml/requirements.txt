@@ -1,0 +1,7 @@
+transformers==4.44.0
+torch>=2.0.0
+langdetect==1.0.9
+pillow==10.0.0
+pytesseract==0.3.10
+regex==2025.9.15
+Flask==2.3.4
