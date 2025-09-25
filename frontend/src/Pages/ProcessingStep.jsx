@@ -207,7 +207,7 @@ export default async function ProcessorPage() {
       params: JSON.stringify(params), // Chaincode expects params as JSON string
       timestamp: formData.timestamp
     };
-    const reponse = await axios.post(`${BASE_URL}/`)
+    const reponse = await axios.post(`${BASE_URL}/processing/batch/${batchId}/step`,submissionData,{ headers: headers });
 
     console.log("Submitting processing step data:", submissionData,{headers:headers});
     await submit(submissionData);

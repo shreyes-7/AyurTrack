@@ -185,7 +185,7 @@ export default async function FarmerCollectionPage() {
       unit: formData.unit
     };
 
-    const response = await axios.post(`${BASE_URL}/collections`, collectionData, {
+    const response = await axios.post(`${BASE_URL}/collections/createCollection`, collectionData, {
       headers: {headers
       }
     });

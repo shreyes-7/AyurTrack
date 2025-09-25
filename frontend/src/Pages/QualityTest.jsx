@@ -238,7 +238,7 @@ export default async function LabTesterPage() {
       timestamp: formData.timestamp
     };
 
-    const response = await axios.post(`${BASE_URL}//batch/:${bacthId}/test`, submissionData, { headers: headers });
+    const response = await axios.post(`${BASE_URL}/quality-tests/batch/:${bacthId}/test`, submissionData, { headers: headers });
     if(response.data.success){
       console.log("Quality test created:", response.data);
 

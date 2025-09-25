@@ -114,7 +114,7 @@ export default async function AddHerb() {
     setSubmitting(true);
 
     try {
-      await axios.post(`${BASE_URL}/manageHerbs`, submissionData,{ headers: headers });
+      await axios.post(`${BASE_URL}/herbs/manageHerbs`, submissionData,{ headers: headers });
       setSuccess(true);
       setTimeout(() => navigate("/admin"), 2000);
     } catch (err) {

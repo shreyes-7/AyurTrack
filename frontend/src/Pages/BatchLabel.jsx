@@ -309,7 +309,7 @@ const handleSubmitFormulation = async (e) => {
   const generateQRCode = async (productBatchId) => {
   try {
     // Fixed: Use GET request to /:productBatchId/generate-qr
-    const response = await axios.get(`${BASE_URL}/${productBatchId}/generate-qr`,{ headers: headers });
+    const response = await axios.get(`${BASE_URL}/batches/${productBatchId}/generate-qr`,{ headers: headers });
     
     if (response.data) {
       const qrToken = response.data; // Backend should return just the token string
