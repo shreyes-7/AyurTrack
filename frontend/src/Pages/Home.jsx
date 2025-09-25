@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   LayoutDashboard,
   Shield,
+  LogIn,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { assets } from "../assets/assets";
@@ -102,7 +103,7 @@ export default function Home() {
             collection to consumer trust.
           </motion.p>
 
-          {/* CTA Button */}
+          {/* CTA Buttons */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -111,9 +112,17 @@ export default function Home() {
           >
             <Link
               to="/dashboard"
-              className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-3xl bg-gradient-to-r from-green-600 to-emerald-500 hover:scale-105 hover:opacity-90 transition duration-300 text-white"
+              className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-3xl bg-gradient-to-r from-green-600 to-emerald-500 hover:scale-105 hover:opacity-90 transition duration-300 text-white shadow-lg hover:shadow-xl"
             >
               Dashboard <ArrowRight className="ml-2 w-5 h-5 text-green-100" />
+            </Link>
+            
+            <Link
+              to="/login"
+              className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-3xl bg-gradient-to-r from-emerald-500 to-green-600 hover:scale-105 hover:opacity-90 transition duration-300 text-white shadow-lg hover:shadow-xl border-2 border-green-400/20"
+            >
+              <LogIn className="mr-2 w-5 h-5 text-green-100" />
+              Sign In
             </Link>
           </motion.div>
 
@@ -182,13 +191,23 @@ export default function Home() {
             Empower consumers and stakeholders with blockchain-backed proof of
             provenance for every Ayurvedic herb.
           </p>
-          <Link
-            to="/batch"
-            className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-3xl bg-gradient-to-r from-emerald-600 to-green-500 hover:scale-105 hover:opacity-90 transition duration-300 text-white"
+          
+          {/* Additional Sign In CTA */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-8"
           >
-            Verify a QR Code{" "}
-            <ShieldCheck className="ml-2 w-5 h-5 text-green-100" />
-          </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center px-8 py-4 text-lg font-bold rounded-3xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            >
+              <LogIn className="mr-3 w-6 h-6" />
+              Get Started - Sign In Now
+              <ArrowRight className="ml-3 w-6 h-6" />
+            </Link>
+          </motion.div>
         </div>
       </section>
     </div>

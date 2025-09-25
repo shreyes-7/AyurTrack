@@ -13,6 +13,8 @@ import {
   Moon,
   Shield,
   Info,
+  LogIn,
+  User,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,6 +51,10 @@ export default function Navbar() {
   const { dark, setDark } = useApp();
   const location = useLocation();
   const sidebarRef = useRef();
+
+  // Mock authentication state - replace with your actual auth logic
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -106,7 +112,7 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Desktop Nav */}
+        {/* Desktop Nav + Auth */}
         <div className="hidden md:flex items-center gap-3">
           {navItems.map((item, i) => {
             const isActive = location.pathname === item.path;
@@ -130,6 +136,34 @@ export default function Navbar() {
               </NavLink>
             );
           })}
+
+          {/* Auth Section - Desktop */}
+          <div className="ml-4 pl-4 border-l border-green-300">
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-full">
+                  <User className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">
+                    {user?.name || "User"}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setIsAuthenticated(false)}
+                  className="px-3 py-2 text-sm font-medium text-green-700 hover:text-red-600 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full text-sm font-medium transition-all duration-300 transform hover:from-green-600 hover:to-green-700 hover:scale-105 hover:shadow-lg"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign In
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Mobile Menu Slide */}
@@ -148,6 +182,38 @@ export default function Navbar() {
                 {item.name}
               </NavLink>
             ))}
+            
+            {/* Mobile Auth */}
+            <div className="w-full border-t border-green-200 pt-2 mt-2">
+              {isAuthenticated ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-lg">
+                    <User className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">
+                      {user?.name || "User"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsAuthenticated(false)}
+                    className="w-full px-4 py-2 text-left text-green-900 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => {
+                    handleLinkClick();
+                    toggleMenu();
+                  }}
+                  className="flex items-center gap-2 w-full px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:from-green-600 hover:to-green-700"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Sign In
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </nav>
@@ -162,7 +228,7 @@ export default function Navbar() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={handleLinkClick} // click outside closes
+              onClick={handleLinkClick}
             />
 
             {/* Sidebar */}
@@ -181,12 +247,30 @@ export default function Navbar() {
               >
                 <X className="w-6 h-6" />
               </button>
+              
               <div className="mb-6">
                 <h1 className="text-2xl font-extrabold bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
                   AyurTrack
                 </h1>
                 <p className="text-xs text-green-700">Botanical Traceability</p>
               </div>
+
+              {/* User Section in Sidebar */}
+              {isAuthenticated && (
+                <div className="mb-6 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-green-600" />
+                    <div>
+                      <p className="text-sm font-medium text-green-800">
+                        {user?.name || "User"}
+                      </p>
+                      <p className="text-xs text-green-600">
+                        {user?.role || "Member"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <nav className="flex flex-col gap-2">
                 {navItems.map((item, i) => {
@@ -195,7 +279,7 @@ export default function Navbar() {
                     <NavLink
                       key={i}
                       to={item.path}
-                      onClick={handleLinkClick} // close sidebar on link click
+                      onClick={handleLinkClick}
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition ${
                         isActive
                           ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-md"
@@ -208,17 +292,39 @@ export default function Navbar() {
                   );
                 })}
 
-                {/* Dark mode inside sidebar */}
+                {/* Auth in Sidebar */}
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => setIsAuthenticated(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg bg-red-50 hover:bg-red-100 transition text-red-700 mt-4"
+                  >
+                    <LogIn className="w-4 h-4 rotate-180" />
+                    <span className="text-sm font-medium">Sign Out</span>
+                  </button>
+                ) : (
+                  <Link
+                    to="/login"
+                    onClick={handleLinkClick}
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md hover:from-green-600 hover:to-green-700 transition mt-4"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span className="text-sm font-medium">Sign In</span>
+                  </Link>
+                )}
+
+                {/* Dark mode toggle */}
                 <button
                   onClick={() => setDark(!dark)}
-                  className="flex items-center gap-2 px-3 py-3 rounded-lg bg-green-200 hover:bg-green-300 transition text-green-900 mt-4"
+                  className="flex items-center gap-3 px-3 py-3 rounded-lg bg-green-200 hover:bg-green-300 transition text-green-900 mt-2"
                 >
                   {dark ? (
                     <Sun className="w-4 h-4 text-yellow-400" />
                   ) : (
                     <Moon className="w-4 h-4 text-blue-400" />
                   )}
-                  {dark ? "Light" : "Dark"}
+                  <span className="text-sm font-medium">
+                    {dark ? "Light Mode" : "Dark Mode"}
+                  </span>
                 </button>
               </nav>
             </motion.div>
