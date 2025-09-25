@@ -5,6 +5,7 @@ import re
 import os
 from langdetect import detect
 from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
+import requests
 
 app = Flask(__name__)
 
@@ -83,21 +84,45 @@ def extract_herb_info(text_en: str):
         return {"herb_name": herb_name, "herb_id": herb_id}
     return None
 
-def extract_info(raw_text: str):
+def extract_info(raw_text: str, backend_url: str):
+    """
+    Extract information from raw text and send it to the backend.
+    """
+    # 1️⃣ Extract info
     try:
         text_en = translate_to_english(raw_text)
     except:
         text_en = raw_text
+
     t_en = text_en.lower()
     farmer_id = extract_farmer_id(t_en)
     quantity_grams = extract_quantity_grams(t_en)
     herb_info = extract_herb_info(text_en)
-    return {
+
+    data = {
         "farmer_id": farmer_id,
         "herb_id": herb_info["herb_id"] if herb_info else None,
         "herb_name": herb_info["herb_name"] if herb_info else None,
         "quantity_grams": quantity_grams,
         "text_en": text_en
+    }
+
+    # 2️⃣ Send data to backend
+    backend_url = "http://localhost:3000/v1/herbs/data"
+
+    try:
+        response = requests.post(backend_url, json=data)
+        response.raise_for_status()  # raise error if status code is 4xx/5xx
+        backend_response = response.json()
+        print("Data sent successfully:", backend_response)
+    except requests.exceptions.RequestException as e:
+        print("Error sending data to backend:", e)
+        backend_response = None
+
+    # 3️⃣ Return the extracted data and backend response if needed
+    return {
+        "extracted_data": data,
+        "backend_response": backend_response
     }
 
 def extract_lat_lon_timestamp(text: str):
@@ -167,7 +192,6 @@ def process_image():
         result = {
             "farmer_id": nlp_result["farmer_id"],
             "herb_id": nlp_result["herb_id"],
-            "herb_name": nlp_result["herb_name"],
             "quantity_grams": nlp_result["quantity_grams"],
             "latitude": lat_lon_time["latitude"],
             "longitude": lat_lon_time["longitude"],
