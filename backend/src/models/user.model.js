@@ -53,11 +53,11 @@ const userSchema = mongoose.Schema(
     fabricOrganization: {
       type: String,
       default: 'FarmerOrg',
-      enum: ['FarmerOrg', 'ProcessorOrg', 'CollectorOrg', 'LabOrg', 'ManufacturerOrg']
+      enum: ['FarmerOrg', 'ProcessorOrg', 'CollectorOrg', 'LabOrg', 'ManufacturerOrg' , 'AdminOrg']
     },
     participantType: {
       type: String,
-      enum: ['farmer', 'processor', 'lab', 'manufacturer'],
+      enum: ['farmer', 'processor', 'lab', 'manufacturer','admin'],
       default: 'farmer'
     },
     isBlockchainEnrolled: {

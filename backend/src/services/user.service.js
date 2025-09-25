@@ -2,6 +2,7 @@ const httpStatus = require('http-status');
 const { User } = require('../models');
 const blockchainService = require('./blockchain.service');
 const ApiError = require('../utils/ApiError');
+const { sendMail } = require('../config/sendMail');
 
 /**
  * Create a user with enhanced blockchain enrollment
@@ -36,6 +37,7 @@ const createUser = async (userBody) => {
 
 
   const generatedPassword = generatePassword();
+  console.log("Generated Password:", generatedPassword);
   userBody.password = generatedPassword;
 
   // Validate required fields for blockchain participants
@@ -59,7 +61,7 @@ const createUser = async (userBody) => {
   <p>Hi ${user.name},</p>
   <p>Your account has been created by the admin.</p>
   <p><strong>Email:</strong> ${user.email}</p>
-  <p><strong>Password:</strong> ${password}</p> 
+  <p><strong>Password:</strong> ${user.password}</p> 
   <p>Cheers,<br/>Team, AyurTrace</p>
 `;
 
@@ -103,7 +105,7 @@ const createUser = async (userBody) => {
  */
 const createBlockchainParticipant = async (user) => {
   try {
-    const { getContract } = require('../fabric/fabricClient');
+    const { getContract } = require('../../fabric/fabricClient ');
     const { contract, gateway } = await getContract('admin');
 
     const participantData = {
@@ -182,7 +184,7 @@ const getUserWithBlockchain = async (userId) => {
 
   if (user.isBlockchainEnrolled) {
     try {
-      const { getContract } = require('../fabric/fabricClient');
+      const { getContract } = require('../../fabric/fabricClient ');
       const { contract, gateway } = await getContract('admin');
 
       const result = await contract.evaluateTransaction(
@@ -232,7 +234,7 @@ const updateUserById = async (userId, updateBody) => {
   if (user.isBlockchainEnrolled && (updateBody.name || updateBody.location || updateBody.contact)) {
     setImmediate(async () => {
       try {
-        const { getContract } = require('../fabric/fabricClient');
+        const { getContract } = require('../../fabric/fabricClient ');
         const { contract, gateway } = await getContract('admin');
 
         const updateData = {
@@ -267,7 +269,7 @@ const updateUserById = async (userId, updateBody) => {
  */
 const queryBlockchainParticipants = async (participantType) => {
   try {
-    const { getContract } = require('../fabric/fabricClient');
+    const { getContract } = require('../../fabric/fabricClient ');
     const { contract, gateway } = await getContract('admin');
 
     const result = await contract.evaluateTransaction('QueryParticipants', participantType);

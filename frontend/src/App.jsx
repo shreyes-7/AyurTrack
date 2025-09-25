@@ -158,20 +158,21 @@ const getRouteConfig = () => [
   { path: "/consumer", component: ConsumerPortal, allowPublic: true },
   
   // Protected routes - General (any authenticated user)
-  { path: "/dashboard", component: Dashboard, roles: [] },
+  { path: "/home", component: Dashboard, roles: [] },
   
   // Farmer routes
   { path: "/collection", component: CollectionEvent, roles: ["farmer"] },
-  { path: "/add-herb", component: AddHerb, roles: ["farmer"] },
+  
   
   // Manufacturer/Processor routes
-  { path: "/processing", component: ProcessingStep, roles: ["manufacturer", "processor"] },
-  { path: "/quality", component: QualityTest, roles: ["manufacturer", "processor", "quality_controller"] },
-  { path: "/batch", component: BatchLabel, roles: ["manufacturer", "processor"] },
+  { path: "/processing", component: ProcessingStep, roles: ["processor"] },
+  { path: "/quality", component: QualityTest, roles: ["lab"] },
+  { path: "/batch", component: BatchLabel, roles: ["manufacturer"] },
   
   // Admin routes
   { path: "/admin", component: AdminDashboard, roles: ["admin"] },
   { path: "/admin-dashboard", component: AdminDashboard, roles: ["admin"] },
+  { path: "/add-herb", component: AddHerb, roles: ["admin"] },
   { path: "/create-user", component: CreateUser, roles: ["admin"] },
   
   // Special routes

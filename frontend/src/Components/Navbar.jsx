@@ -44,40 +44,43 @@ export default function Navbar() {
 
     // Base navigation items for authenticated users
     const navItems = [
-      { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" />, roles: ["farmer", "manufacturer", "processor", "distributor", "retailer", "admin", "quality_controller"] },
+      { name: "Home", path: "/", icon: <LayoutDashboard className="w-5 h-5" />, roles: ["farmer", "manufacturer", "processor","admin", "lab"] },
     ];
 
     // Role-specific navigation items
     if (hasRole(['farmer'])) {
       navItems.push(
-        { name: "Collection", path: "/collection", icon: <Leaf className="w-5 h-5" />, roles: ["farmer"] },
-        { name: "Add Herb", path: "/add-herb", icon: <Plus className="w-5 h-5" />, roles: ["farmer"] }
+        { name: "Collection", path: "/collection", icon: <Leaf className="w-5 h-5" />, roles: ["farmer"] }
+        
       );
     }
 
-    if (hasRole(['manufacturer', 'processor'])) {
+    if (hasRole(['processor'])) {
       navItems.push(
-        { name: "Processing", path: "/processing", icon: <FlaskConical className="w-5 h-5" />, roles: ["manufacturer", "processor"] },
+        { name: "Processing", path: "/processing", icon: <FlaskConical className="w-5 h-5" />, roles: ["manufacturer", "processor"] }
+        
+      );
+    }
+    if (hasRole(['manufacturer'])) {
+      navItems.push(
+       
         { name: "Batch", path: "/batch", icon: <Package className="w-5 h-5" />, roles: ["manufacturer", "processor"] }
       );
     }
 
-    if (hasRole(['manufacturer', 'processor', 'quality_controller'])) {
+    if (hasRole(['lab'])) {
       navItems.push(
-        { name: "Lab Test", path: "/quality", icon: <CheckCircle className="w-5 h-5" />, roles: ["manufacturer", "processor", "quality_controller"] }
+        { name: "Lab Test", path: "/quality", icon: <CheckCircle className="w-5 h-5" />, roles: [ "lab"] }
       );
     }
 
-    if (hasRole(['distributor', 'retailer'])) {
-      navItems.push(
-        { name: "Inventory", path: "/inventory", icon: <ShoppingCart className="w-5 h-5" />, roles: ["distributor", "retailer"] }
-      );
-    }
+    
 
     if (hasRole(['admin'])) {
       navItems.push(
         { name: "Admin", path: "/admin", icon: <Shield className="w-5 h-5" />, roles: ["admin"] },
-        { name: "Create User", path: "/create-user", icon: <UserPlus className="w-5 h-5" />, roles: ["admin"] }
+        { name: "Create User", path: "/create-user", icon: <UserPlus className="w-5 h-5" />, roles: ["admin"] },
+        { name: "Add Herb", path: "/add-herb", icon: <Plus className="w-5 h-5" />, roles: ["admin"] }
       );
     }
 

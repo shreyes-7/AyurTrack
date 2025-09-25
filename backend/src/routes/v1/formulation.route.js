@@ -9,7 +9,7 @@ const router = express.Router();
 
 // BLOCKCHAIN ROUTES (place first to avoid conflicts)
 router.get('/blockchain/formulations',
-    // auth('getFormulations'),
+    auth('getFormulations'),
     formulationController.getBlockchainFormulations
 );
 
@@ -84,7 +84,7 @@ router.get('/:productBatchId/blockchain/provenance',
 // BASIC CRUD ROUTES
 router.route('/')
   .post(
-    // auth('createFormulation'),  // <-- comment this out temporarily
+    auth('createFormulation'),  // <-- comment this out temporarily
     validate(formulationValidation.createFormulation),
     formulationController.createFormulation
   )

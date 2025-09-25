@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, Leaf, ArrowRight, Shield, Sparkles } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../App'; // Import from your main App file
-
+import { BASE_URL } from '../../api';
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,17 +58,17 @@ const Login = () => {
     setErrors({});
     
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        }),
-      });
+  // Use the BASE_URL constant with the correct endpoint
+  const response = await fetch(`${BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: formData.email,
+      password: formData.password
+    }),
+  });
 
       const data = await response.json();
 
