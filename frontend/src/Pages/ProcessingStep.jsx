@@ -4,6 +4,8 @@ import { apiEndpoints } from "../services/api";
 import { useSubmit } from "../hooks/useFetch";
 import { ButtonLoader } from "../Components/Loader";
 import Layout from "../Components/Layout";
+import axios from "axios";
+import { getAuthHeaders } from "../utils/tokenUtils";
 
 // Processing step types configuration
 const PROCESSING_STEPS = [
@@ -35,10 +37,11 @@ const PROCESSING_STEPS = [
   }
 ];
 
-export default function ProcessorPage() {
+export default async function ProcessorPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [timestampStatus, setTimestampStatus] = useState('idle');
+  const headers=  await getAuthHeaders()
   
   // Get processor info from session/context
   const [processorInfo, setProcessorInfo] = useState(null);
@@ -204,8 +207,9 @@ export default function ProcessorPage() {
       params: JSON.stringify(params), // Chaincode expects params as JSON string
       timestamp: formData.timestamp
     };
+    const reponse = await axios.post(`${BASE_URL}/`)
 
-    console.log("Submitting processing step data:", submissionData);
+    console.log("Submitting processing step data:", submissionData,{headers:headers});
     await submit(submissionData);
   };
 

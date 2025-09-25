@@ -4,13 +4,17 @@ import { apiEndpoints } from "../services/api";
 import { useSubmit } from "../hooks/useFetch";
 import { ButtonLoader } from "../Components/Loader";
 import Layout from "../Components/Layout";
+import axios from "axios";
+import { BASE_URL } from "../../api";
+import { useAuth } from "../App";
+import { getAuthHeaders } from "../utils/tokenUtils";
 
-export default function FarmerCollectionPage() {
+export default async function FarmerCollectionPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [locationStatus, setLocationStatus] = useState('idle'); // idle, loading, success, error
   const [timestampStatus, setTimestampStatus] = useState('idle');
-  
+  const headers= await getAuthHeaders()
   // Get farmer info from session/context (this should come from authentication)
   const [farmerInfo, setFarmerInfo] = useState(null);
   
@@ -181,6 +185,13 @@ export default function FarmerCollectionPage() {
       unit: formData.unit
     };
 
+    const response = await axios.post(`${BASE_URL}/collections`, collectionData, {
+      headers: {headers
+      }
+    });
+    
+    console.log('Response:', response.data);
+ 
     console.log("Submitting collection data with default quality params:", submissionData);
     await submit(submissionData);
   };
