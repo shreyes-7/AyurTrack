@@ -328,28 +328,7 @@ const Login = () => {
                   </button>
                 </form>
 
-                {/* Development helper */}
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="mt-6 p-4 bg-gray-100/70 rounded-2xl border border-gray-200">
-                    <p className="text-xs text-gray-600 mb-2">Development Login:</p>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ email: 'farmer1@example.com', password: 'password123' })}
-                        className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                      >
-                        Farmer Login
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ email: 'admin@example.com', password: 'password123' })}
-                        className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                      >
-                        Admin Login
-                      </button>
-                    </div>
-                  </div>
-                )}
+               
               </div>
             </div>
           </div>
