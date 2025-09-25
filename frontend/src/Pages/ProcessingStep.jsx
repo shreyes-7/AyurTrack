@@ -5,7 +5,7 @@ import { useSubmit } from "../hooks/useFetch";
 import { ButtonLoader } from "../Components/Loader";
 import Layout from "../Components/Layout";
 
-// Processing step types configuration based on chaincode requirements
+// Processing step types configuration
 const PROCESSING_STEPS = [
   {
     id: 'cleaning',
@@ -17,7 +17,7 @@ const PROCESSING_STEPS = [
   },
   {
     id: 'drying',
-    name: 'Drying',
+    name: 'Drying', 
     icon: '🌡️',
     description: 'Moisture reduction using controlled temperature and airflow',
     color: 'bg-orange-100 text-orange-800 border-orange-200',
@@ -27,7 +27,7 @@ const PROCESSING_STEPS = [
   {
     id: 'grinding',
     name: 'Grinding',
-    icon: '⚙️',
+    icon: '⚙️', 
     description: 'Size reduction to achieve desired mesh size',
     color: 'bg-green-100 text-green-800 border-green-200',
     hasParams: true,
@@ -35,50 +35,39 @@ const PROCESSING_STEPS = [
   }
 ];
 
-// Drying methods
-const DRYING_METHODS = [
-  'shade_dried',
-  'sun_dried',
-  'oven_dried',
-  'freeze_dried',
-  'vacuum_dried',
-  'hot_air_dried'
-];
-
 export default function ProcessorPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [timestampStatus, setTimestampStatus] = useState('idle');
-  const [availableBatches, setAvailableBatches] = useState([]);
-  const [selectedBatch, setSelectedBatch] = useState(null);
   
   // Get processor info from session/context
   const [processorInfo, setProcessorInfo] = useState(null);
   
   const [formData, setFormData] = useState({
-    // User inputs
-    batchId: "",
-    stepType: "",
+    // User inputs - ALL INPUT FIELDS
+    batchId: "",              // Input: Batch ID to identify which herb batch to process
+    herbSpecies: "",          // Input: Name of herb species (tells processor which herb they're working on)
+    stepType: "",            // Dropdown: cleaning/drying/grinding
     
     // Processing parameters (varies by step type)
     // Drying parameters
-    temperature: "",
-    duration: "",
-    method: "",
+    temperature: "",          // Input: e.g., "40C"
+    duration: "",            // Input: e.g., "8hours"
+    method: "",              // Input: e.g., "shade-dried"
     
-    // Grinding parameters
-    meshSize: "",
-    grindingTemperature: "",
+    // Grinding parameters  
+    meshSize: "",            // Input: e.g., "80"
+    grindingTemperature: "", // Input: e.g., "ambient"
     
-    // Auto-generated fields
-    processId: "",
-    facilityId: "",
-    timestamp: "",
+    // Auto-generated fields (backend will generate these)
+    processId: "",           // PROC_${Date.now()}_${facilityId}
+    facilityId: "",          // From logged-in processor session
+    timestamp: "",           // Current ISO timestamp
     
-    // Additional fields
-    notes: "",
-    operatorName: "",
-    equipmentUsed: ""
+    // Additional optional inputs
+    operatorName: "",        // Input: Name of operator
+    equipmentUsed: "",       // Input: Equipment used for processing
+    notes: ""                // Input: Additional processing notes
   });
 
   const { submit, submitting, error, success } = useSubmit(
@@ -98,7 +87,7 @@ export default function ProcessorPage() {
       id: "P266201K3X", // Following your ID pattern: P + timestamp + random
       name: "Advanced Herbal Processing Facility",
       blockchainUserId: "P266201K3X",
-      mspId: "Org1MSP",
+      mspId: "Org1MSP", 
       location: "Jaipur Industrial Area",
       license: "PROC2024001",
       capacity: "1000kg/day",
@@ -115,61 +104,12 @@ export default function ProcessorPage() {
     }));
   }, []);
 
-  // Mock available batches - in real implementation, fetch from API
-  useEffect(() => {
-    const mockBatches = [
-      {
-        batchId: 'BATCH_1737360000000_F266201K3X',
-        species: 'Ashwagandha',
-        quantity: 50.5,
-        collectorId: 'F266201K3X',
-        status: 'collected',
-        collectionDate: '2025-01-15T08:30:00Z',
-        currentOwner: 'F266201K3X'
-      },
-      {
-        batchId: 'BATCH_1737446400000_F266202M9Z', 
-        species: 'Turmeric',
-        quantity: 75.2,
-        collectorId: 'F266202M9Z',
-        status: 'processed:cleaning',
-        collectionDate: '2025-01-16T10:00:00Z',
-        currentOwner: 'P266201K3X'
-      },
-      {
-        batchId: 'BATCH_1737532800000_F266203A7B',
-        species: 'Tulsi',
-        quantity: 25.0,
-        collectorId: 'F266203A7B',
-        status: 'processed:drying',
-        collectionDate: '2025-01-17T06:00:00Z',
-        currentOwner: 'P266201K3X'
-      },
-      {
-        batchId: 'BATCH_1737619200000_F266204Q8W',
-        species: 'Neem',
-        quantity: 30.8,
-        collectorId: 'F266204Q8W',
-        status: 'processed:grinding',
-        collectionDate: '2025-01-18T12:00:00Z',
-        currentOwner: 'P266201K3X'
-      }
-    ];
-    setAvailableBatches(mockBatches);
-  }, []);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-    
-    // Update selected batch when batchId changes
-    if (name === 'batchId') {
-      const batch = availableBatches.find(b => b.batchId === value);
-      setSelectedBatch(batch);
-    }
   };
 
   const getCurrentTimestamp = () => {
@@ -187,7 +127,7 @@ export default function ProcessorPage() {
   const validateStep = (step) => {
     switch (step) {
       case 1:
-        return formData.batchId && formData.stepType;
+        return formData.batchId && formData.herbSpecies && formData.stepType;
       case 2:
         if (formData.stepType === 'cleaning') {
           return true; // No additional parameters required for cleaning
@@ -231,7 +171,7 @@ export default function ProcessorPage() {
       return;
     }
 
-    // Prepare params object based on step type
+    // Prepare params object based on step type (following chaincode structure)
     let params = {};
     
     if (formData.stepType === 'cleaning') {
@@ -261,7 +201,7 @@ export default function ProcessorPage() {
       batchId: formData.batchId,
       facilityId: processorInfo.blockchainUserId,
       stepType: formData.stepType,
-      params: params,
+      params: JSON.stringify(params), // Chaincode expects params as JSON string
       timestamp: formData.timestamp
     };
 
@@ -374,67 +314,85 @@ export default function ProcessorPage() {
                     Batch & Processing Step Selection
                   </h2>
 
-                  {/* Batch Selection */}
+                  {/* Key Information Card */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+                      <span className="mr-2">ℹ️</span>
+                      Key Information
+                    </h3>
+                    <div className="text-sm text-blue-800 space-y-2">
+                      <div><strong>Batch ID:</strong> Identifies which specific herb batch you are processing</div>
+                      <div><strong>Herb Species:</strong> Tells you which type of herb you are working with (e.g., Ashwagandha, Turmeric)</div>
+                      <div><strong>Step Type:</strong> The specific processing operation you are performing</div>
+                    </div>
+                  </div>
+
+                  {/* Batch ID Input */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Select Herb Batch for Processing *
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <span className="flex items-center">
+                        📋 Batch ID * <span className="ml-2 text-xs text-gray-500">(Identifies which batch to process)</span>
+                      </span>
                     </label>
-                    <select
+                    <input
+                      type="text"
                       name="batchId"
                       value={formData.batchId}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="">-- Select a batch --</option>
-                      {availableBatches.map((batch) => (
-                        <option key={batch.batchId} value={batch.batchId}>
-                          {batch.batchId.slice(-12)}... - {batch.species} ({batch.quantity}kg) - {batch.status}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Enter batch ID (e.g., BATCH_1737360000000_F266201K3X)"
+                    />
                     <div className="mt-1 text-sm text-gray-500">
-                      Choose from available batches ready for processing
+                      Enter the complete batch ID that you want to process
                     </div>
                   </div>
 
-                  {/* Selected Batch Info */}
-                  {selectedBatch && (
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+                  {/* Herb Species Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <span className="flex items-center">
+                        🌿 Herb Species * <span className="ml-2 text-xs text-gray-500">(Tells you which herb you're processing)</span>
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      name="herbSpecies"
+                      value={formData.herbSpecies}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                      placeholder="Enter herb species name (e.g., Ashwagandha, Turmeric, Tulsi)"
+                    />
+                    <div className="mt-1 text-sm text-gray-500">
+                      This identifies which type of herb you are processing and helps determine appropriate processing parameters
+                    </div>
+                  </div>
+
+                  {/* Current Processing Status Preview */}
+                  {formData.batchId && formData.herbSpecies && (
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
                       <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-                        <span className="mr-2">📋</span>
-                        Selected Batch Details
+                        <span className="mr-2">🎯</span>
+                        Processing Target
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Species:</span>
-                            <span className="font-medium">{selectedBatch.species}</span>
+                            <span className="text-gray-600">Batch ID:</span>
+                            <span className="font-mono text-sm">{formData.batchId}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Quantity:</span>
-                            <span className="font-medium">{selectedBatch.quantity} kg</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Current Status:</span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              selectedBatch.status.includes('processed') ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {selectedBatch.status}
-                            </span>
+                            <span className="text-gray-600">Herb Species:</span>
+                            <span className="font-medium text-green-800">{formData.herbSpecies}</span>
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Collector ID:</span>
-                            <span className="font-mono text-sm">{selectedBatch.collectorId}</span>
+                            <span className="text-gray-600">Processor:</span>
+                            <span className="font-medium">{processorInfo?.name}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Collection Date:</span>
-                            <span className="text-sm">{new Date(selectedBatch.collectionDate).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Current Owner:</span>
-                            <span className="font-mono text-sm">{selectedBatch.currentOwner}</span>
+                            <span className="text-gray-600">Status:</span>
+                            <span className="text-blue-600 font-medium">Ready for Processing</span>
                           </div>
                         </div>
                       </div>
@@ -518,7 +476,7 @@ export default function ProcessorPage() {
                           <strong>Standard Cleaning Process:</strong> Remove foreign matter, damaged materials, and impurities according to standard operating procedures. No additional parameters required.
                         </div>
                         <div className="mt-2 text-xs text-blue-600">
-                          This step will be recorded with standard cleaning protocols.
+                          This step will be recorded with standard cleaning protocols for <strong>{formData.herbSpecies}</strong>.
                         </div>
                       </div>
                     </div>
@@ -529,7 +487,7 @@ export default function ProcessorPage() {
                     <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-lg border border-orange-200">
                       <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
                         <span className="mr-2">🌡️</span>
-                        Drying Process Configuration
+                        Drying Process Configuration for {formData.herbSpecies}
                       </h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -571,25 +529,23 @@ export default function ProcessorPage() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Method *
                           </label>
-                          <select
+                          <input
+                            type="text"
                             name="method"
                             value={formData.method}
                             onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
-                          >
-                            <option value="">Select method</option>
-                            {DRYING_METHODS.map((method) => (
-                              <option key={method} value={method}>
-                                {method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                              </option>
-                            ))}
-                          </select>
+                            placeholder="e.g., shade-dried"
+                          />
+                          <div className="mt-1 text-xs text-gray-600">
+                            Drying method (shade-dried, sun-dried, etc.)
+                          </div>
                         </div>
                       </div>
 
                       <div className="mt-4 p-3 bg-orange-100 rounded-lg">
                         <div className="text-sm text-orange-800">
-                          <strong>Drying Guidelines:</strong> Maintain consistent temperature and airflow for optimal moisture reduction while preserving active compounds.
+                          <strong>Drying Guidelines for {formData.herbSpecies}:</strong> Maintain consistent temperature and airflow for optimal moisture reduction while preserving active compounds.
                         </div>
                       </div>
                     </div>
@@ -600,7 +556,7 @@ export default function ProcessorPage() {
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
                       <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
                         <span className="mr-2">⚙️</span>
-                        Grinding Process Configuration
+                        Grinding Process Configuration for {formData.herbSpecies}
                       </h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -641,7 +597,7 @@ export default function ProcessorPage() {
 
                       <div className="mt-4 p-3 bg-green-100 rounded-lg">
                         <div className="text-sm text-green-800">
-                          <strong>Grinding Standards:</strong> Control particle size and prevent heat generation to maintain product quality and bioactive compounds.
+                          <strong>Grinding Standards for {formData.herbSpecies}:</strong> Control particle size and prevent heat generation to maintain product quality and bioactive compounds.
                         </div>
                       </div>
                     </div>
@@ -757,15 +713,15 @@ export default function ProcessorPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Batch ID:</span>
-                          <span className="font-mono text-sm">{formData.batchId.slice(-15)}...</span>
+                          <span className="font-mono text-sm">{formData.batchId}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Herb Species:</span>
+                          <span className="font-medium text-green-800">{formData.herbSpecies}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Processing Step:</span>
                           <span className="font-medium">{getSelectedStepType()?.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Species:</span>
-                          <span className="font-medium">{selectedBatch?.species}</span>
                         </div>
                       </div>
                       
@@ -794,7 +750,7 @@ export default function ProcessorPage() {
                       <h4 className="font-medium text-gray-800 mb-2">Processing Parameters:</h4>
                       {formData.stepType === 'cleaning' && (
                         <div className="text-sm text-gray-600">
-                          Standard cleaning process - no additional parameters
+                          Standard cleaning process for {formData.herbSpecies} - no additional parameters
                         </div>
                       )}
                       {formData.stepType === 'drying' && (

@@ -30,10 +30,10 @@ const TEST_TYPES = [
   }
 ];
 
-// Pesticide compounds for multi-select
+// Pesticide compounds for multi-select input
 const PESTICIDE_COMPOUNDS = [
   'organophosphates',
-  'organochlorines',
+  'organochlorines', 
   'carbamates',
   'pyrethroids',
   'neonicotinoids',
@@ -55,41 +55,42 @@ export default function LabTesterPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [timestampStatus, setTimestampStatus] = useState('idle');
-  const [availableBatches, setAvailableBatches] = useState([]);
-  const [selectedBatch, setSelectedBatch] = useState(null);
   
   // Get lab info from session/context
   const [labInfo, setLabInfo] = useState(null);
   
   const [formData, setFormData] = useState({
-    // User inputs
-    batchId: "",
-    testType: "",
+    // User inputs - ALL INPUT FIELDS
+    batchId: "",                    // Input: Batch ID to identify which herb batch to test
+    herbSpecies: "",               // Input: Name of herb species (tells lab which herb they're testing)
+    testType: "",                  // Dropdown: moisturetest/pesticidetest/activecompound
     
     // Test results (varies by test type)
-    // Moisture test
-    moisture: "",
-    moistureMethod: "",
-    temperature: "",
+    // Moisture test parameters
+    moisture: "",                  // Input: e.g., 8.2
+    moistureMethod: "",           // Input: e.g., "LOD"
+    temperature: "",              // Input: e.g., "105C"
     
-    // Pesticide test
-    pesticidePPM: "",
-    compoundsTested: [],
-    pesticideMethod: "",
+    // Pesticide test parameters  
+    pesticidePPM: "",            // Input: e.g., 1.1
+    compoundsTested: "",         // Input: comma-separated list e.g., "organophosphates, organochlorines"
+    pesticideMethod: "",         // Input: e.g., "GC-MS"
     
-    // Active compound test
-    activeCompoundLevel: "",
-    activeCompoundMethod: "",
-    standard: "",
+    // Active compound test parameters
+    activeCompoundLevel: "",     // Input: Withanolides level, Curcumin level, etc.
+    activeCompoundMethod: "",    // Input: e.g., "HPLC"
+    standard: "",                // Input: e.g., "USP monograph"
     
-    // Auto-generated fields
-    testId: "",
-    labId: "",
-    timestamp: "",
+    // Auto-generated fields (backend will generate these)
+    testId: "",                  // TEST_${Date.now()}_${labId}
+    labId: "",                   // From logged-in lab session
+    timestamp: "",               // Current ISO timestamp
     
-    // Additional fields
-    notes: "",
-    certificationRef: ""
+    // Additional optional inputs
+    notes: "",                   // Input: Additional testing notes
+    certificationRef: "",        // Input: Internal certification reference
+    operator: "",                // Input: Name of lab operator
+    equipmentUsed: ""            // Input: Equipment used for testing
   });
 
   const { submit, submitting, error, success } = useSubmit(
@@ -124,57 +125,11 @@ export default function LabTesterPage() {
     }));
   }, []);
 
-  // Mock available batches - in real implementation, fetch from API
-  useEffect(() => {
-    const mockBatches = [
-      {
-        batchId: 'BATCH_1737360000000_F266201K3X',
-        species: 'Ashwagandha',
-        quantity: 50.5,
-        collectorId: 'F266201K3X',
-        status: 'collected',
-        collectionDate: '2025-01-15T08:30:00Z'
-      },
-      {
-        batchId: 'BATCH_1737446400000_F266202M9Z', 
-        species: 'Turmeric',
-        quantity: 75.2,
-        collectorId: 'F266202M9Z',
-        status: 'processed:drying',
-        collectionDate: '2025-01-16T10:00:00Z'
-      },
-      {
-        batchId: 'BATCH_1737532800000_F266203A7B',
-        species: 'Tulsi',
-        quantity: 25.0,
-        collectorId: 'F266203A7B',
-        status: 'processed:grinding',
-        collectionDate: '2025-01-17T06:00:00Z'
-      }
-    ];
-    setAvailableBatches(mockBatches);
-  }, []);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }));
-    
-    // Update selected batch when batchId changes
-    if (name === 'batchId') {
-      const batch = availableBatches.find(b => b.batchId === value);
-      setSelectedBatch(batch);
-    }
-  };
-
-  const handleCompoundsChange = (compound) => {
-    setFormData(prev => ({
-      ...prev,
-      compoundsTested: prev.compoundsTested.includes(compound)
-        ? prev.compoundsTested.filter(c => c !== compound)
-        : [...prev.compoundsTested, compound]
     }));
   };
 
@@ -193,13 +148,13 @@ export default function LabTesterPage() {
   const validateStep = (step) => {
     switch (step) {
       case 1:
-        return formData.batchId && formData.testType;
+        return formData.batchId && formData.herbSpecies && formData.testType;
       case 2:
         if (formData.testType === 'moisturetest') {
           return formData.moisture && formData.moistureMethod && formData.temperature;
         }
         if (formData.testType === 'pesticidetest') {
-          return formData.pesticidePPM && formData.compoundsTested.length > 0 && formData.pesticideMethod;
+          return formData.pesticidePPM && formData.compoundsTested && formData.pesticideMethod;
         }
         if (formData.testType === 'activecompound') {
           return formData.activeCompoundLevel && formData.activeCompoundMethod && formData.standard;
@@ -237,7 +192,7 @@ export default function LabTesterPage() {
       return;
     }
 
-    // Prepare results object based on test type
+    // Prepare results object based on test type (following chaincode structure)
     let results = {};
     
     if (formData.testType === 'moisturetest') {
@@ -247,14 +202,16 @@ export default function LabTesterPage() {
         temperature: formData.temperature
       };
     } else if (formData.testType === 'pesticidetest') {
+      // Convert comma-separated string to array
+      const compoundsArray = formData.compoundsTested.split(',').map(c => c.trim()).filter(c => c);
       results = {
         pesticidePPM: parseFloat(formData.pesticidePPM),
-        compounds_tested: formData.compoundsTested,
+        compounds_tested: compoundsArray,
         method: formData.pesticideMethod
       };
     } else if (formData.testType === 'activecompound') {
-      const species = selectedBatch?.species;
-      const compoundInfo = ACTIVE_COMPOUNDS_BY_SPECIES[species];
+      // Determine compound name based on species
+      const compoundInfo = ACTIVE_COMPOUNDS_BY_SPECIES[formData.herbSpecies];
       if (compoundInfo) {
         results[compoundInfo.compound] = formData.activeCompoundLevel;
       }
@@ -262,16 +219,19 @@ export default function LabTesterPage() {
       results.standard = formData.standard;
     }
 
+    // Add optional parameters
+    if (formData.operator) results.operator = formData.operator;
+    if (formData.equipmentUsed) results.equipment = formData.equipmentUsed;
+    if (formData.notes) results.notes = formData.notes;
+
     // Prepare data in the format expected by the chaincode
     const submissionData = {
       testId: formData.testId,
       batchId: formData.batchId,
       labId: labInfo.blockchainUserId,
       testType: formData.testType,
-      results: results,
-      timestamp: formData.timestamp,
-      notes: formData.notes,
-      certificationRef: formData.certificationRef
+      results: JSON.stringify(results), // Chaincode expects results as JSON string
+      timestamp: formData.timestamp
     };
 
     console.log("Submitting quality test data:", submissionData);
@@ -280,8 +240,8 @@ export default function LabTesterPage() {
 
   const getSelectedTestType = () => TEST_TYPES.find(t => t.id === formData.testType);
   const getActiveCompoundInfo = () => {
-    if (!selectedBatch) return null;
-    return ACTIVE_COMPOUNDS_BY_SPECIES[selectedBatch.species];
+    if (!formData.herbSpecies) return null;
+    return ACTIVE_COMPOUNDS_BY_SPECIES[formData.herbSpecies];
   };
 
   return (
@@ -387,67 +347,85 @@ export default function LabTesterPage() {
                     Batch & Test Selection
                   </h2>
 
-                  {/* Batch Selection */}
+                  {/* Key Information Card */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+                      <span className="mr-2">ℹ️</span>
+                      Key Information
+                    </h3>
+                    <div className="text-sm text-blue-800 space-y-2">
+                      <div><strong>Batch ID:</strong> Identifies which specific herb batch you are testing</div>
+                      <div><strong>Herb Species:</strong> Tells you which type of herb you are testing (e.g., Ashwagandha, Turmeric) - determines active compound test parameters</div>
+                      <div><strong>Test Type:</strong> The specific quality analysis you are performing</div>
+                    </div>
+                  </div>
+
+                  {/* Batch ID Input */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Select Batch for Testing *
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <span className="flex items-center">
+                        📋 Batch ID * <span className="ml-2 text-xs text-gray-500">(Identifies which batch to test)</span>
+                      </span>
                     </label>
-                    <select
+                    <input
+                      type="text"
                       name="batchId"
                       value={formData.batchId}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="">-- Select a batch --</option>
-                      {availableBatches.map((batch) => (
-                        <option key={batch.batchId} value={batch.batchId}>
-                          {batch.batchId.slice(-12)}... - {batch.species} ({batch.quantity}kg) - {batch.status}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Enter batch ID (e.g., BATCH_1737360000000_F266201K3X)"
+                    />
                     <div className="mt-1 text-sm text-gray-500">
-                      Choose from available batches ready for testing
+                      Enter the complete batch ID that you want to test
                     </div>
                   </div>
 
-                  {/* Selected Batch Info */}
-                  {selectedBatch && (
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+                  {/* Herb Species Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <span className="flex items-center">
+                        🌿 Herb Species * <span className="ml-2 text-xs text-gray-500">(Tells you which herb you're testing)</span>
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      name="herbSpecies"
+                      value={formData.herbSpecies}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                      placeholder="Enter herb species name (e.g., Ashwagandha, Turmeric, Tulsi)"
+                    />
+                    <div className="mt-1 text-sm text-gray-500">
+                      This identifies which type of herb you are testing and determines the active compound parameters
+                    </div>
+                  </div>
+
+                  {/* Current Testing Target Preview */}
+                  {formData.batchId && formData.herbSpecies && (
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
                       <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-                        <span className="mr-2">📦</span>
-                        Selected Batch Details
+                        <span className="mr-2">🎯</span>
+                        Testing Target
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Species:</span>
-                            <span className="font-medium">{selectedBatch.species}</span>
+                            <span className="text-gray-600">Batch ID:</span>
+                            <span className="font-mono text-sm">{formData.batchId}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Quantity:</span>
-                            <span className="font-medium">{selectedBatch.quantity} kg</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Status:</span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              selectedBatch.status.includes('processed') ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {selectedBatch.status}
-                            </span>
+                            <span className="text-gray-600">Herb Species:</span>
+                            <span className="font-medium text-green-800">{formData.herbSpecies}</span>
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Collector ID:</span>
-                            <span className="font-mono text-sm">{selectedBatch.collectorId}</span>
+                            <span className="text-gray-600">Laboratory:</span>
+                            <span className="font-medium">{labInfo?.name}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Collection Date:</span>
-                            <span className="text-sm">{new Date(selectedBatch.collectionDate).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Batch ID:</span>
-                            <span className="font-mono text-xs">{selectedBatch.batchId.slice(-20)}...</span>
+                            <span className="text-gray-600">Status:</span>
+                            <span className="text-blue-600 font-medium">Ready for Testing</span>
                           </div>
                         </div>
                       </div>
@@ -467,7 +445,7 @@ export default function LabTesterPage() {
                             relative cursor-pointer rounded-lg border-2 p-6 transition-all duration-200
                             ${formData.testType === test.id
                               ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200'
-                              : `border-gray-200 hover:border-gray-300 hover:bg-gray-50 ${test.color.replace('text-', 'hover:text-').replace('bg-', 'hover:bg-')}`
+                              : `border-gray-200 hover:border-gray-300 hover:bg-gray-50`
                             }
                           `}
                           onClick={() => setFormData(prev => ({ ...prev, testType: test.id }))}
@@ -493,6 +471,11 @@ export default function LabTesterPage() {
                         <div>
                           <h3 className="font-semibold">{getSelectedTestType().name}</h3>
                           <p className="text-sm mt-1">{getSelectedTestType().description}</p>
+                          {formData.herbSpecies && formData.testType === 'activecompound' && getActiveCompoundInfo() && (
+                            <p className="text-xs mt-2 font-medium">
+                              Target compound for {formData.herbSpecies}: {getActiveCompoundInfo().compound}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -505,7 +488,7 @@ export default function LabTesterPage() {
                 <div className="space-y-6">
                   <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
                     <span className="text-indigo-600 mr-2">⚗️</span>
-                    Test Parameters & Results
+                    Test Parameters & Results for {formData.herbSpecies}
                   </h2>
 
                   {/* Moisture Test Parameters */}
@@ -513,7 +496,7 @@ export default function LabTesterPage() {
                     <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-lg border border-blue-200">
                       <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
                         <span className="mr-2">💧</span>
-                        Moisture Test Configuration
+                        Moisture Test Configuration for {formData.herbSpecies}
                       </h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -570,7 +553,7 @@ export default function LabTesterPage() {
 
                       <div className="mt-4 p-3 bg-blue-100 rounded-lg">
                         <div className="text-sm text-blue-800">
-                          <strong>Standard Reference:</strong> Loss on Drying (LOD) method as per USP/BP monograph
+                          <strong>Standard Reference:</strong> Loss on Drying (LOD) method as per USP/BP monograph for {formData.herbSpecies}
                         </div>
                       </div>
                     </div>
@@ -581,10 +564,10 @@ export default function LabTesterPage() {
                     <div className="bg-gradient-to-r from-red-50 to-pink-50 p-6 rounded-lg border border-red-200">
                       <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
                         <span className="mr-2">🧪</span>
-                        Pesticide Residue Analysis
+                        Pesticide Residue Analysis for {formData.herbSpecies}
                       </h3>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Pesticide PPM *
@@ -608,6 +591,23 @@ export default function LabTesterPage() {
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Compounds Tested *
+                          </label>
+                          <input
+                            type="text"
+                            name="compoundsTested"
+                            value={formData.compoundsTested}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+                            placeholder="e.g., organophosphates, organochlorines"
+                          />
+                          <div className="mt-1 text-xs text-gray-600">
+                            Enter comma-separated compound names
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Analysis Method *
                           </label>
                           <input
@@ -621,37 +621,9 @@ export default function LabTesterPage() {
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                          Compounds Tested * (Select all that apply)
-                        </label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          {PESTICIDE_COMPOUNDS.map((compound) => (
-                            <label
-                              key={compound}
-                              className={`
-                                flex items-center p-3 border rounded-lg cursor-pointer transition-all duration-200
-                                ${formData.compoundsTested.includes(compound)
-                                  ? 'border-red-500 bg-red-50 text-red-800'
-                                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                }
-                              `}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={formData.compoundsTested.includes(compound)}
-                                onChange={() => handleCompoundsChange(compound)}
-                                className="sr-only"
-                              />
-                              <span className="text-sm font-medium">{compound}</span>
-                              {formData.compoundsTested.includes(compound) && (
-                                <span className="ml-auto text-red-500">✓</span>
-                              )}
-                            </label>
-                          ))}
-                        </div>
-                        <div className="mt-2 text-sm text-gray-600">
-                          Selected: {formData.compoundsTested.length} compound(s)
+                      <div className="mt-4 p-3 bg-red-100 rounded-lg">
+                        <div className="text-sm text-red-800">
+                          <strong>Available Compounds:</strong> {PESTICIDE_COMPOUNDS.join(', ')}
                         </div>
                       </div>
                     </div>
@@ -662,14 +634,14 @@ export default function LabTesterPage() {
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
                       <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
                         <span className="mr-2">🔬</span>
-                        Active Compound Analysis
+                        Active Compound Analysis for {formData.herbSpecies}
                       </h3>
 
-                      {selectedBatch && getActiveCompoundInfo() ? (
+                      {formData.herbSpecies && getActiveCompoundInfo() ? (
                         <div className="space-y-6">
                           <div className="p-4 bg-green-100 rounded-lg">
                             <div className="text-sm text-green-800">
-                              <strong>Target Compound for {selectedBatch.species}:</strong> {getActiveCompoundInfo().compound}
+                              <strong>Target Compound for {formData.herbSpecies}:</strong> {getActiveCompoundInfo().compound}
                               <br />
                               <strong>Minimum Required:</strong> {getActiveCompoundInfo().min} {getActiveCompoundInfo().unit}
                             </div>
@@ -678,16 +650,14 @@ export default function LabTesterPage() {
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
-                                {getActiveCompoundInfo().compound} Level *
+                                {getActiveCompoundInfo().compound.charAt(0).toUpperCase() + getActiveCompoundInfo().compound.slice(1)} Level *
                               </label>
                               <div className="relative">
                                 <input
-                                  type="number"
+                                  type="text"
                                   name="activeCompoundLevel"
                                   value={formData.activeCompoundLevel}
                                   onChange={handleChange}
-                                  step="0.01"
-                                  min="0"
                                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                                   placeholder={`e.g., ${getActiveCompoundInfo().min}`}
                                 />
@@ -746,42 +716,56 @@ export default function LabTesterPage() {
                       ) : (
                         <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                           <div className="text-yellow-800">
-                            Please select a batch first to configure active compound testing parameters.
+                            Please enter the herb species first to configure active compound testing parameters.
                           </div>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Additional Test Information */}
+                  {/* Optional Parameters */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Certification Reference (Optional)
+                        Lab Operator Name (Optional)
                       </label>
                       <input
                         type="text"
-                        name="certificationRef"
-                        value={formData.certificationRef}
+                        name="operator"
+                        value={formData.operator}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Internal certificate/report reference"
+                        placeholder="Name of the testing operator"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Additional Notes (Optional)
+                        Equipment Used (Optional)
                       </label>
-                      <textarea
-                        name="notes"
-                        value={formData.notes}
+                      <input
+                        type="text"
+                        name="equipmentUsed"
+                        value={formData.equipmentUsed}
                         onChange={handleChange}
-                        rows={3}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Any additional observations or remarks..."
+                        placeholder="Equipment model/ID used for testing"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Testing Notes (Optional)
+                    </label>
+                    <textarea
+                      name="notes"
+                      value={formData.notes}
+                      onChange={handleChange}
+                      rows={4}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                      placeholder="Any additional observations, deviations, or special testing conditions..."
+                    />
                   </div>
                 </div>
               )}
@@ -790,12 +774,12 @@ export default function LabTesterPage() {
               {currentStep === 3 && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
-                    <span className="text-green-600 mr-2">📋</span>
-                    Review & Submit
+                    <span className="text-green-600 mr-2">✅</span>
+                    Review & Submit Test Results
                   </h2>
 
                   {/* Timestamp */}
-                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 rounded-lg border border-orange-200">
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-lg border border-yellow-200">
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Test Completion Timestamp *
                     </label>
@@ -807,7 +791,7 @@ export default function LabTesterPage() {
                           name="timestamp"
                           value={formData.timestamp}
                           onChange={handleChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200"
                           placeholder="ISO timestamp will be auto-generated"
                           readOnly={timestampStatus === 'loading'}
                         />
@@ -824,7 +808,7 @@ export default function LabTesterPage() {
                           ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                           : timestampStatus === 'success'
                           ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                         }
                       `}
                     >
@@ -849,15 +833,15 @@ export default function LabTesterPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Batch ID:</span>
-                          <span className="font-mono text-sm">{formData.batchId.slice(-15)}...</span>
+                          <span className="font-mono text-sm">{formData.batchId}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Herb Species:</span>
+                          <span className="font-medium text-green-800">{formData.herbSpecies}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Test Type:</span>
                           <span className="font-medium">{getSelectedTestType()?.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Species:</span>
-                          <span className="font-medium">{selectedBatch?.species}</span>
                         </div>
                       </div>
                       
@@ -891,12 +875,18 @@ export default function LabTesterPage() {
                       )}
                       {formData.testType === 'pesticidetest' && (
                         <div className="text-sm text-gray-600">
-                          Pesticide PPM: {formData.pesticidePPM} | Method: {formData.pesticideMethod} | Compounds: {formData.compoundsTested.join(', ')}
+                          Pesticide PPM: {formData.pesticidePPM} | Method: {formData.pesticideMethod} | Compounds: {formData.compoundsTested}
                         </div>
                       )}
                       {formData.testType === 'activecompound' && getActiveCompoundInfo() && (
                         <div className="text-sm text-gray-600">
                           {getActiveCompoundInfo().compound}: {formData.activeCompoundLevel} {getActiveCompoundInfo().unit} | Method: {formData.activeCompoundMethod} | Standard: {formData.standard}
+                        </div>
+                      )}
+                      {(formData.operator || formData.equipmentUsed) && (
+                        <div className="text-sm text-gray-600 mt-2">
+                          {formData.operator && `Operator: ${formData.operator} | `}
+                          {formData.equipmentUsed && `Equipment: ${formData.equipmentUsed}`}
                         </div>
                       )}
                     </div>

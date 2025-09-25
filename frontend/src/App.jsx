@@ -4,6 +4,7 @@ import Navbar from "./Components/Navbar";
 import Footer from "./Components/Footer";
 import ScrollToTop from "./Components/ScrollToTop";
 import About from "./Pages/AboutPage";
+
 // Lazy load pages
 const Home = lazy(() => import("./Pages/Home"));
 const Dashboard = lazy(() => import("./Pages/Dashboard"));
@@ -16,6 +17,8 @@ const Settings = lazy(() => import("./Pages/Settings"));
 const NotFound = lazy(() => import("./Pages/NotFound"));
 const AdminDashboard = lazy(() => import("./Pages/AdminDashboard"));
 const AddHerb = lazy(() => import("./Pages/AddHerb"));
+const CreateUser = lazy(() => import("./Pages/CreateUser"));
+const Login = lazy(() => import("./Pages/Login")); // Add this line
 
 export default function App() {
   return (
@@ -27,6 +30,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/home" element={<Home />} />
+            <Route path="/login" element={<Login />} /> {/* Add this line */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/collection" element={<CollectionEvent />} />
             <Route path="/processing" element={<ProcessingStep />} />
@@ -35,9 +39,11 @@ export default function App() {
             <Route path="/consumer" element={<ConsumerPortal />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="*" element={<NotFound />} />
-            <Route path="/about" element={<About />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/add-herb" element={<AddHerb />} />
+            <Route path="/create-user" element={<CreateUser />} />
+            <Route path="/about" element={<About />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </main>

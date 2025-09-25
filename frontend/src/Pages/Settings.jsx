@@ -44,34 +44,36 @@ export default function Settings() {
 
   return (
     <Layout>
-      <div className="min-h-[calc(100vh-4rem)] bg-green-50 text-green-900 p-6">
-        <h1 className="text-3xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-green-600 via-green-500 to-green-400">
+      {/* Light background with subtle gradient */}
+      <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-gray-50 to-white p-8 text-gray-900">
+        <h1 className="text-4xl font-extrabold mb-10 text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-cyan-600">
           Settings & Utilities
         </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* App Info & Queue */}
-          <Card className="bg-green-100 border border-green-200 shadow-md rounded-2xl p-6">
-            <h2 className="text-xl font-semibold mb-4 text-green-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Card with clean look */}
+          <Card className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 transform transition-all duration-300">
+            <h2 className="text-2xl font-semibold mb-4 text-purple-700">
               Offline Queue
             </h2>
-            <p className="text-sm text-green-600 mb-3">
+            <p className="text-base text-gray-600 mb-6">
               Pending transactions not yet synced to blockchain:
             </p>
-            <div className="flex items-center justify-between mb-4">
-              <span>
-                Queue length: <strong>{queue.length}</strong>
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-lg">
+                Queue length:{" "}
+                <strong className="text-purple-800">{queue.length}</strong>
               </span>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button
                   onClick={clearQueue}
-                  className="flex items-center gap-1 px-3 py-2 rounded-lg bg-red-400 hover:bg-red-300 transition"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-400 active:scale-95 transition"
                 >
                   <Trash2 className="w-4 h-4" /> Clear
                 </button>
                 <button
                   onClick={downloadQueue}
-                  className="flex items-center gap-1 px-3 py-2 rounded-lg bg-green-400 hover:bg-green-300 transition"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 text-white hover:bg-cyan-400 active:scale-95 transition"
                 >
                   <Download className="w-4 h-4" /> Backup
                 </button>
@@ -79,81 +81,85 @@ export default function Settings() {
             </div>
             <button
               onClick={simulateSync}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-400 transition"
+              className="flex items-center gap-3 px-5 py-3 text-base rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:opacity-90 active:scale-95 transition shadow"
             >
-              <RefreshCw className="w-4 h-4" /> Sync with Blockchain
+              <RefreshCw className="w-5 h-5" /> Sync with Blockchain
             </button>
           </Card>
 
-          {/* Appearance & Notifications */}
-          <Card className="bg-green-100 border border-green-200 shadow-md rounded-2xl p-6">
-            <h2 className="text-xl font-semibold mb-4 text-green-800">
+          {/* Appearance & Alerts */}
+          <Card className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 transform transition-all duration-300">
+            <h2 className="text-2xl font-semibold mb-6 text-purple-700">
               Appearance & Alerts
             </h2>
 
-            <div className="flex items-center justify-between mb-4">
-              <span>Dark Mode</span>
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-lg">Dark Mode</span>
               <button
-                disabled
-                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-green-200 cursor-not-allowed"
+                onClick={() => setDark(!dark)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition"
               >
-                <Sun className="w-4 h-4 text-green-700" /> Light
+                {dark ? (
+                  <Moon className="w-5 h-5" />
+                ) : (
+                  <Sun className="w-5 h-5" />
+                )}
+                {dark ? "Dark" : "Light"}
               </button>
             </div>
 
-            <div className="flex items-center justify-between mb-4">
-              <span>Notifications</span>
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-lg">Notifications</span>
               <button
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
+                onClick={() => setNotifications(!notifications)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-white transition ${
                   notifications
-                    ? "bg-green-500 hover:bg-green-400"
-                    : "bg-green-200 hover:bg-green-300"
-                } transition`}
+                    ? "bg-cyan-500 hover:bg-cyan-400"
+                    : "bg-gray-400 hover:bg-gray-500"
+                }`}
               >
-                <Bell className="w-4 h-4" /> {notifications ? "On" : "Off"}
+                <Bell className="w-5 h-5" />
+                {notifications ? "On" : "Off"}
               </button>
             </div>
           </Card>
 
-          {/* User Info */}
-          <Card className="bg-green-100 border border-green-200 shadow-md rounded-2xl p-6">
-            <h2 className="text-xl font-semibold mb-4 text-green-800">
+          {/* User Profile */}
+          <Card className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 transform transition-all duration-300">
+            <h2 className="text-2xl font-semibold mb-6 text-purple-700">
               User Profile
             </h2>
-            <label className="block text-sm text-green-600 mb-1">
+            <label className="block text-sm text-gray-600 mb-2">
               User Name
             </label>
             <input
               type="text"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
-              className="w-full p-3 rounded-lg bg-green-50 border border-green-200 text-green-900 focus:outline-none focus:ring-2 focus:ring-green-400 mb-4"
+              className="w-full p-3 mb-6 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
             />
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-400 transition">
-              <User className="w-4 h-4" /> Update Profile
+            <button className="flex items-center gap-2 px-5 py-3 rounded-xl text-base bg-cyan-500 text-white hover:bg-cyan-400 active:scale-95 transition shadow">
+              <User className="w-5 h-5" /> Update Profile
             </button>
           </Card>
 
           {/* Advanced Utilities */}
-          <Card className="bg-green-100 border border-green-200 shadow-md rounded-2xl p-6">
-            <h2 className="text-xl font-semibold mb-4 text-green-800">
+          <Card className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-lg hover:-translate-y-1 transform transition-all duration-300">
+            <h2 className="text-2xl font-semibold mb-4 text-purple-700">
               Advanced Utilities
             </h2>
-            <p className="text-sm text-green-600 mb-4">
+            <p className="text-base text-gray-600 mb-6">
               Experimental blockchain and app utilities for developers and
               admins.
             </p>
             <button
               onClick={resetApp}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-400 hover:bg-red-300 transition mb-3"
+              className="flex items-center gap-3 px-5 py-3 mb-4 rounded-xl bg-red-500 text-white hover:bg-red-400 active:scale-95 transition shadow"
             >
-              <Trash2 className="w-4 h-4" /> Reset App Data
+              <Trash2 className="w-5 h-5" /> Reset App Data
             </button>
-            <button
-              onClick={simulateSync}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-400 transition"
-            >
-              <RefreshCw className="w-4 h-4" /> Force Sync Blockchain
+            <button className="flex items-center gap-3 px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:opacity-90 active:scale-95 transition shadow">
+              <RefreshCw className="w-5 h-5" /> Force Sync Blockchain
             </button>
           </Card>
         </div>

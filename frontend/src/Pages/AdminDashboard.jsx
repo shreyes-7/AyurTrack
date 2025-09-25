@@ -22,7 +22,10 @@ import {
   Filter,
   Download,
   Leaf,
+  UserPlus,
 } from "lucide-react";
+
+
 // Mock data for admin functionality
 const mockUsers = [
   {
@@ -77,6 +80,7 @@ const mockUsers = [
   },
 ];
 
+
 const mockActivities = [
   {
     id: 1,
@@ -125,6 +129,7 @@ const mockActivities = [
   },
 ];
 
+
 const mockAuditLogs = [
   {
     id: 1,
@@ -152,6 +157,7 @@ const mockAuditLogs = [
   },
 ];
 
+
 const roleOptions = [
   { value: "farmer", label: "Farmer", color: "bg-green-500" },
   { value: "collector", label: "Collector", color: "bg-blue-500" },
@@ -160,6 +166,7 @@ const roleOptions = [
   { value: "manufacturer", label: "Manufacturer", color: "bg-red-500" },
   { value: "admin", label: "Admin", color: "bg-gray-500" },
 ];
+
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -174,10 +181,29 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const handleAddHerb = () => navigate("/add-herb");
+  
+  // Navigation handlers
+  const handleAddHerb = () => {
+    console.log("Navigating to add herb page...");
+    navigate("/add-herb");
+  };
+
+  const handleCreateUser = () => {
+    console.log("Navigating to create user page...");
+    navigate("/create-user");
+  };
+  
   const handleExportData = () => {
     ExportData.handleExport(activeTab, users, herbs, activities, auditLogs);
   };
+
+
+  // Function to get role display information
+  const getRoleInfo = (roleValue) => {
+    const role = roleOptions.find((r) => r.value === roleValue);
+    return role || { label: roleValue, color: "bg-gray-500" };
+  };
+
 
   // Fetch herbs from API using axios
   const fetchHerbs = async () => {
@@ -185,6 +211,7 @@ export default function AdminDashboard() {
     setError(null);
     try {
       const response = await axios.get("http://localhost:3000/v1/herbs");
+
 
       // Use only actual API data
       const transformedHerbs = response.data.data.results.map((herb) => ({
@@ -196,6 +223,7 @@ export default function AdminDashboard() {
         parts: herb.parts,
       }));
 
+
       setHerbs(transformedHerbs);
     } catch (err) {
       console.error("Error fetching herbs:", err);
@@ -206,11 +234,13 @@ export default function AdminDashboard() {
     }
   };
 
+
   useEffect(() => {
     if (activeTab === "herbs") {
       fetchHerbs();
     }
   }, [activeTab]);
+
 
   // Filter users based on search and role
   const filteredUsers = users.filter((user) => {
@@ -220,6 +250,7 @@ export default function AdminDashboard() {
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
+
 
   // Filter herbs based on search and category
   const filteredHerbs = herbs.filter((herb) => {
@@ -236,12 +267,14 @@ export default function AdminDashboard() {
     return matchesSearch && matchesCategory;
   });
 
+
   // Filter activities based on search
   const filteredActivities = activities.filter(
     (activity) =>
       activity.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.action.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -260,6 +293,7 @@ export default function AdminDashboard() {
     }
   };
 
+
   const getStatusColor = (status) => {
     switch (status) {
       case "success":
@@ -276,6 +310,7 @@ export default function AdminDashboard() {
         return "text-gray-400 bg-gray-400/20";
     }
   };
+
 
   const getCategoryColor = (category) => {
     switch (category) {
@@ -295,6 +330,7 @@ export default function AdminDashboard() {
         return "bg-gray-100 text-gray-800";
     }
   };
+
 
   const handleRoleChange = (userId, newRole) => {
     setUsers(
@@ -316,6 +352,7 @@ export default function AdminDashboard() {
     ]);
   };
 
+
   const handleUserStatusChange = (userId, newStatus) => {
     setUsers(
       users.map((user) =>
@@ -324,10 +361,13 @@ export default function AdminDashboard() {
     );
   };
 
+
   const handleHerbEdit = (herbId) => {
     console.log("Edit herb:", herbId);
-    // Implement edit functionality
+    // Navigate to edit herb page
+    navigate(`/edit-herb/${herbId}`);
   };
+
 
   const handleHerbDelete = async (herbId) => {
     if (window.confirm("Are you sure you want to delete this herb?")) {
@@ -341,6 +381,7 @@ export default function AdminDashboard() {
       }
     }
   };
+
 
   const stats = [
     {
@@ -368,6 +409,7 @@ export default function AdminDashboard() {
       color: "from-red-500 to-rose-600",
     },
   ];
+
 
   const tabs = [
     {
@@ -397,6 +439,7 @@ export default function AdminDashboard() {
     },
   ];
 
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -413,13 +456,14 @@ export default function AdminDashboard() {
           <div className="flex gap-3">
             <button
               onClick={handleExportData}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium"
             >
               <Download className="w-4 h-4" />
               Export Data
             </button>
           </div>
         </div>
+
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -449,6 +493,7 @@ export default function AdminDashboard() {
           ))}
         </div>
 
+
         {/* Tab Navigation */}
         <div className="flex space-x-1 bg-green-100 p-1 rounded-lg">
           {tabs.map((tab) => (
@@ -466,6 +511,7 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
+
 
         {/* Tab Content */}
         <motion.div
@@ -507,6 +553,7 @@ export default function AdminDashboard() {
                 </div>
               </Card>
 
+
               {/* System Health */}
               <Card title="System Health">
                 <div className="space-y-4">
@@ -535,33 +582,44 @@ export default function AdminDashboard() {
             </div>
           )}
 
+
           {activeTab === "users" && (
             <Card title="User Management">
-              {/* Search and Filter */}
+              {/* Create User Button and Search/Filter */}
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="flex-1 relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-green-500" />
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-900 placeholder-green-500 focus:outline-none focus:ring-2 focus:ring-green-400"
-                  />
+                <div className="flex gap-4 flex-1">
+                  <div className="flex-1 relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-green-500" />
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-900 placeholder-green-500 focus:outline-none focus:ring-2 focus:ring-green-400"
+                    />
+                  </div>
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-900 focus:outline-none focus:ring-2 focus:ring-green-400"
+                  >
+                    <option value="all">All Roles</option>
+                    {roleOptions.map((role) => (
+                      <option key={role.value} value={role.value}>
+                        {role.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-900 focus:outline-none focus:ring-2 focus:ring-green-400"
+                <button
+                  onClick={handleCreateUser}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-medium"
                 >
-                  <option value="all">All Roles</option>
-                  {roleOptions.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
+                  <UserPlus className="w-4 h-4" />
+                  Create New User
+                </button>
               </div>
+
 
               {/* Users Table */}
               <div className="overflow-x-auto">
@@ -577,78 +635,78 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredUsers.map((user) => (
-                      <tr
-                        key={user.id}
-                        className="border-b border-green-100 hover:bg-green-50 transition-colors"
-                      >
-                        <td className="py-3 px-4">
-                          <div>
-                            <div className="text-green-900 font-medium">
-                              {user.name}
+                    {filteredUsers.map((user) => {
+                      const roleInfo = getRoleInfo(user.role);
+                      return (
+                        <tr
+                          key={user.id}
+                          className="border-b border-green-100 hover:bg-green-50 transition-colors"
+                        >
+                          <td className="py-3 px-4">
+                            <div>
+                              <div className="text-green-900 font-medium">
+                                {user.name}
+                              </div>
+                              <div className="text-green-700 text-sm">
+                                {user.email}
+                              </div>
                             </div>
-                            <div className="text-green-700 text-sm">
-                              {user.email}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <select
-                            value={user.role}
-                            onChange={(e) =>
-                              handleRoleChange(user.id, e.target.value)
-                            }
-                            className="px-2 py-1 bg-green-50 border border-green-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                          >
-                            {roleOptions.map((role) => (
-                              <option key={role.value} value={role.value}>
-                                {role.label}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                              user.status
-                            )}`}
-                          >
-                            {user.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-green-900">
-                          {user.activities}
-                        </td>
-                        <td className="py-3 px-4 text-green-900 text-sm">
-                          {new Date(user.lastActive).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                handleUserStatusChange(
-                                  user.id,
-                                  user.status === "active"
-                                    ? "inactive"
-                                    : "active"
-                                )
-                              }
-                              className="p-1 text-green-600 hover:text-green-800 transition"
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${roleInfo.color} shadow-sm`}
                             >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button className="p-1 text-red-500 hover:text-red-700 transition">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {roleInfo.label}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                                user.status
+                              )}`}
+                            >
+                              {user.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-green-900">
+                            {user.activities}
+                          </td>
+                          <td className="py-3 px-4 text-green-900 text-sm">
+                            {new Date(user.lastActive).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() =>
+                                  handleUserStatusChange(
+                                    user.id,
+                                    user.status === "active"
+                                      ? "inactive"
+                                      : "active"
+                                  )
+                                }
+                                className="p-1 text-green-600 hover:text-green-800 transition"
+                                title="Toggle user status"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button 
+                                className="p-1 text-red-500 hover:text-red-700 transition"
+                                title="Delete user"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </Card>
           )}
+
 
           {activeTab === "herbs" && (
             <Card title="Herb Management">
@@ -666,12 +724,14 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
+
               {/* Error Message */}
               {error && (
                 <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded-lg mb-6">
                   {error}
                 </div>
               )}
+
 
               {/* Search and Filter */}
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -707,6 +767,7 @@ export default function AdminDashboard() {
                   <span>{loading ? "Refreshing..." : "Refresh"}</span>
                 </button>
               </div>
+
 
               {/* Herbs Table */}
               {loading ? (
@@ -795,6 +856,7 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
 
+
                   {filteredHerbs.length === 0 && !loading && (
                     <div className="text-center py-12">
                       <Leaf className="w-12 h-12 text-green-300 mx-auto mb-4" />
@@ -807,6 +869,7 @@ export default function AdminDashboard() {
               )}
             </Card>
           )}
+
 
           {activeTab === "activities" && (
             <Card title="Activity Tracking">
@@ -823,6 +886,7 @@ export default function AdminDashboard() {
                   />
                 </div>
               </div>
+
 
               {/* Activities List */}
               <div className="space-y-4">
@@ -870,6 +934,7 @@ export default function AdminDashboard() {
               </div>
             </Card>
           )}
+
 
           {activeTab === "audit" && (
             <Card title="Audit Logs">
