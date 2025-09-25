@@ -2,7 +2,7 @@
 const express = require('express');
 const validate = require('../../middlewares/validate');
 const auth = require('../../middlewares/auth');
-const qualityTestValidation = require('../../validations/qualityTest.validation');
+const {qualityTestValidation} = require('../../validations')
 const { qualityTestController } = require('../../controllers');
 
 const router = express.Router();
