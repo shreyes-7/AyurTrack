@@ -118,7 +118,37 @@ const userSchema = mongoose.Schema(
     timestamps: true,
   }
 );
+userSchema.add({
+  // Enhanced blockchain integration
+  blockchainWallet: {
+    address: String,
+    privateKey: String, // Encrypted
+    publicKey: String
+  },
 
+  // Supply chain specific fields
+  operationalCapacity: {
+    dailyCapacity: String,
+    storageCapacity: String,
+    processingTypes: [String]
+  },
+
+  // Certification tracking
+  certificationDetails: [{
+    type: String,
+    issuer: String,
+    issueDate: Date,
+    expiryDate: Date,
+    certificateNumber: String
+  }],
+
+  // Performance metrics
+  metrics: {
+    totalBatchesHandled: { type: Number, default: 0 },
+    averageQualityScore: { type: Number, default: 0 },
+    complianceRate: { type: Number, default: 100 }
+  }
+});
 // Add existing plugins and methods
 userSchema.plugin(toJSON);
 userSchema.plugin(paginate);

@@ -4,23 +4,31 @@ const blockchainService = require('./blockchain.service');
 const ApiError = require('../utils/ApiError');
 
 /**
- * Create a user with automatic blockchain enrollment
+ * Create a user with enhanced blockchain enrollment
  */
 const createUser = async (userBody) => {
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
 
-  // Validate location coordinates
-  if (!userBody.location || !userBody.location.latitude || !userBody.location.longitude) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Location with latitude and longitude is required');
+  // Validate required fields for blockchain participants
+  if (userBody.participantType !== 'user') {
+    if (!userBody.location || !userBody.location.latitude || !userBody.location.longitude) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Location with latitude and longitude is required for supply chain participants');
+    }
+    if (!userBody.contact) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Contact information is required for supply chain participants');
+    }
+    if (!userBody.fabricOrganization) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Fabric organization is required for supply chain participants');
+    }
   }
 
-  // Create user in MongoDB first
+  // Create user in MongoDB
   const user = await User.create(userBody);
 
-  // Attempt blockchain enrollment in background
-  if (userBody.fabricOrganization) {
+  // Attempt blockchain enrollment for supply chain participants
+  if (userBody.participantType !== 'user' && userBody.fabricOrganization) {
     setImmediate(async () => {
       try {
         console.log(`🔗 Attempting blockchain enrollment for user: ${user.email}`);
@@ -37,7 +45,7 @@ const createUser = async (userBody) => {
           });
           console.log(`✅ User ${user.email} successfully enrolled in blockchain`);
 
-          // Create participant in blockchain with location
+          // Create participant in blockchain
           await createBlockchainParticipant(user);
         } else {
           console.log(`⚠️ Blockchain enrollment failed for ${user.email}: ${enrollmentResult.message}`);
@@ -52,36 +60,45 @@ const createUser = async (userBody) => {
 };
 
 /**
- * Create participant record in blockchain with geolocation
+ * Create participant record in blockchain
  */
 const createBlockchainParticipant = async (user) => {
   try {
-    // Fix the path - adjust based on your actual folder structure
-    const { getContract } = require('../../fabric/fabricClient'); // Updated path
+    const { getContract } = require('../fabric/fabricClient');
     const { contract, gateway } = await getContract('admin');
 
     const participantData = {
       type: user.participantType,
       id: user.blockchainUserId,
       name: user.name,
-      location: user.getBlockchainLocation(), // "Address (lat, long)"
+      location: user.getBlockchainLocation(),
       mspId: getMSPId(user.fabricOrganization),
       contact: user.contact,
       certifications: user.certifications || [],
-      license: user.license || ''
+      license: user.license || '',
+      operationalCapacity: user.operationalCapacity || {}
     };
 
     await contract.submitTransaction('CreateParticipant', JSON.stringify(participantData));
     await gateway.disconnect();
 
-    console.log(`✅ Blockchain participant created for ${user.email} at location (${user.location.latitude}, ${user.location.longitude})`);
+    console.log(`✅ Blockchain participant created for ${user.email}`);
+
+    // Initialize user metrics
+    await User.findByIdAndUpdate(user.id, {
+      'metrics.totalBatchesHandled': 0,
+      'metrics.averageQualityScore': 0,
+      'metrics.complianceRate': 100
+    });
+
   } catch (error) {
     console.error(`❌ Failed to create blockchain participant:`, error.message);
+    throw error;
   }
 };
 
 /**
- * Manual blockchain enrollment for existing users
+ * Manual blockchain enrollment
  */
 const enrollUserInBlockchain = async (userId) => {
   const user = await getUserById(userId);
@@ -97,17 +114,16 @@ const enrollUserInBlockchain = async (userId) => {
     };
   }
 
-  const orgName = user.fabricOrganization || 'FarmerOrg';
-
-  const enrollmentResult = await blockchainService.enrollUser(user.blockchainUserId, orgName);
+  const enrollmentResult = await blockchainService.enrollUser(
+    user.blockchainUserId,
+    user.fabricOrganization
+  );
 
   if (enrollmentResult.success) {
     await updateUserById(userId, {
       isBlockchainEnrolled: true,
       blockchainEnrollmentDate: new Date()
     });
-
-    // Create participant in blockchain
     await createBlockchainParticipant(user);
   }
 
@@ -124,6 +140,7 @@ const getUserWithBlockchain = async (userId) => {
   }
 
   let blockchainProfile = null;
+
   if (user.isBlockchainEnrolled) {
     try {
       const { getContract } = require('../fabric/fabricClient');
@@ -137,6 +154,7 @@ const getUserWithBlockchain = async (userId) => {
 
       blockchainProfile = JSON.parse(result.toString());
       await gateway.disconnect();
+
     } catch (error) {
       console.error('Failed to fetch blockchain profile:', error.message);
     }
@@ -149,18 +167,19 @@ const getUserWithBlockchain = async (userId) => {
 };
 
 /**
- * Update user and sync with blockchain
+ * Update user with blockchain sync
  */
 const updateUserById = async (userId, updateBody) => {
   const user = await getUserById(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
+
   if (updateBody.email && (await User.isEmailTaken(updateBody.email, userId))) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
 
-  // Validate location coordinates if updating location
+  // Validate location coordinates if updating
   if (updateBody.location) {
     if (!updateBody.location.latitude || !updateBody.location.longitude) {
       throw new ApiError(httpStatus.BAD_REQUEST, 'Location must include both latitude and longitude');
@@ -179,10 +198,11 @@ const updateUserById = async (userId, updateBody) => {
 
         const updateData = {
           name: user.name,
-          location: user.getBlockchainLocation(), // Updated location format
+          location: user.getBlockchainLocation(),
           contact: user.contact,
           certifications: user.certifications,
-          license: user.license || ''
+          license: user.license || '',
+          operationalCapacity: user.operationalCapacity || {}
         };
 
         await contract.submitTransaction(
@@ -204,48 +224,20 @@ const updateUserById = async (userId, updateBody) => {
 };
 
 /**
- * Create herb batch with location validation
+ * Query blockchain participants
  */
-const createHerbBatch = async (batchData, collectorId) => {
-  const user = await getUserById(collectorId);
-  if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Collector not found');
-  }
-
-  if (!user.isBlockchainEnrolled) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'User must be enrolled in blockchain to create batches');
-  }
-
+const queryBlockchainParticipants = async (participantType) => {
   try {
     const { getContract } = require('../fabric/fabricClient');
-    const { contract, gateway } = await getContract(user.blockchainUserId);
+    const { contract, gateway } = await getContract('admin');
 
-    const result = await contract.submitTransaction(
-      'CreateHerbBatch',
-      batchData.batchId,
-      batchData.collectionId,
-      user.blockchainUserId,
-      batchData.latitude.toString(),
-      batchData.longitude.toString(),
-      batchData.timestamp,
-      batchData.species,
-      batchData.quantity.toString(),
-      JSON.stringify(batchData.quality || {})
-    );
+    const result = await contract.evaluateTransaction('QueryParticipants', participantType);
+    const participants = JSON.parse(result.toString());
 
     await gateway.disconnect();
-
-    return {
-      success: true,
-      batch: JSON.parse(result.toString()),
-      collector: {
-        id: user.blockchainUserId,
-        name: user.name,
-        location: user.getBlockchainLocation()
-      }
-    };
+    return participants;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to create herb batch: ${error.message}`);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to query blockchain participants: ${error.message}`);
   }
 };
 
@@ -294,5 +286,5 @@ module.exports = {
   enrollUserInBlockchain,
   getUserWithBlockchain,
   createBlockchainParticipant,
-  createHerbBatch,
+  queryBlockchainParticipants,
 };

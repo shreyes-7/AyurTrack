@@ -34,9 +34,4 @@ router
   .route('/blockchain/participants/:participantType')
   .get(auth('getUsers'), validate(userValidation.queryParticipants), userController.queryBlockchainParticipants);
 
-// Herb batch creation
-router
-  .route('/:collectorId/batches')
-  .post(auth('manageUsers'), validate(userValidation.createHerbBatch), userController.createHerbBatch);
-
 module.exports = router;

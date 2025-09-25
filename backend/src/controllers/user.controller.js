@@ -46,7 +46,6 @@ const enrollUserInBlockchain = catchAsync(async (req, res) => {
 
 const getUserBlockchainStatus = catchAsync(async (req, res) => {
   const user = await userService.getUserById(req.params.userId);
-
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
@@ -58,33 +57,15 @@ const getUserBlockchainStatus = catchAsync(async (req, res) => {
     fabricOrganization: user.fabricOrganization,
     participantType: user.participantType,
     location: user.location,
-    enrollmentDate: user.blockchainEnrollmentDate || null
+    enrollmentDate: user.blockchainEnrollmentDate || null,
+    metrics: user.metrics
   });
 });
 
 const queryBlockchainParticipants = catchAsync(async (req, res) => {
   const { participantType = 'farmer' } = req.params;
-
-  try {
-    const { getContract } = require('../fabric/fabricClient');
-    const { contract, gateway } = await getContract('admin');
-
-    const result = await contract.evaluateTransaction('QueryParticipants', participantType);
-    const participants = JSON.parse(result.toString());
-
-    await gateway.disconnect();
-    res.send(participants);
-  } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to query blockchain participants: ${error.message}`);
-  }
-});
-
-const createHerbBatch = catchAsync(async (req, res) => {
-  const { collectorId } = req.params;
-  const batchData = req.body;
-
-  const result = await userService.createHerbBatch(batchData, collectorId);
-  res.status(httpStatus.CREATED).send(result);
+  const participants = await userService.queryBlockchainParticipants(participantType);
+  res.send(participants);
 });
 
 module.exports = {
@@ -97,5 +78,4 @@ module.exports = {
   enrollUserInBlockchain,
   getUserBlockchainStatus,
   queryBlockchainParticipants,
-  createHerbBatch,
 };

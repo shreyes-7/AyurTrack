@@ -7,8 +7,8 @@ const createUser = {
     password: Joi.string().required().custom(password),
     name: Joi.string().required(),
     role: Joi.string().required().valid('user', 'admin', 'farmer', 'processor', 'lab', 'manufacturer'),
-    fabricOrganization: Joi.string().valid('FarmerOrg', 'ProcessorOrg', 'CollectorOrg', 'LabOrg', 'ManufacturerOrg'),
-    participantType: Joi.string().valid('farmer', 'processor', 'lab', 'manufacturer'),
+    fabricOrganization: Joi.string().required().valid('FarmerOrg', 'ProcessorOrg', 'CollectorOrg', 'LabOrg', 'ManufacturerOrg'),
+    participantType: Joi.string().required().valid('farmer', 'processor', 'lab', 'manufacturer'),
     location: Joi.object({
       latitude: Joi.number().required().min(-90).max(90),
       longitude: Joi.number().required().min(-180).max(180),
@@ -17,6 +17,20 @@ const createUser = {
     contact: Joi.string().required(),
     certifications: Joi.array().items(Joi.string()).optional(),
     license: Joi.string().optional(),
+    operationalCapacity: Joi.object({
+      dailyCapacity: Joi.string().optional(),
+      storageCapacity: Joi.string().optional(),
+      processingTypes: Joi.array().items(Joi.string()).optional()
+    }).optional(),
+    certificationDetails: Joi.array().items(
+      Joi.object({
+        type: Joi.string().required(),
+        issuer: Joi.string().required(),
+        issueDate: Joi.date().required(),
+        expiryDate: Joi.date().required(),
+        certificateNumber: Joi.string().required()
+      })
+    ).optional()
   }),
 };
 
@@ -24,12 +38,12 @@ const getUsers = {
   query: Joi.object().keys({
     name: Joi.string(),
     role: Joi.string(),
-    participantType: Joi.string(),
+    participantType: Joi.string().valid('farmer', 'processor', 'lab', 'manufacturer'),
     fabricOrganization: Joi.string(),
     isBlockchainEnrolled: Joi.boolean(),
     sortBy: Joi.string(),
-    limit: Joi.number().integer(),
-    page: Joi.number().integer(),
+    limit: Joi.number().integer().min(1).max(100),
+    page: Joi.number().integer().min(1),
   }),
 };
 
@@ -59,6 +73,20 @@ const updateUser = {
       contact: Joi.string(),
       certifications: Joi.array().items(Joi.string()),
       license: Joi.string(),
+      operationalCapacity: Joi.object({
+        dailyCapacity: Joi.string(),
+        storageCapacity: Joi.string(),
+        processingTypes: Joi.array().items(Joi.string())
+      }),
+      certificationDetails: Joi.array().items(
+        Joi.object({
+          type: Joi.string().required(),
+          issuer: Joi.string().required(),
+          issueDate: Joi.date().required(),
+          expiryDate: Joi.date().required(),
+          certificateNumber: Joi.string().required()
+        })
+      )
     })
     .min(1),
 };
@@ -84,22 +112,6 @@ const queryParticipants = {
   }),
 };
 
-const createHerbBatch = {
-  params: Joi.object().keys({
-    collectorId: Joi.string().custom(objectId),
-  }),
-  body: Joi.object().keys({
-    batchId: Joi.string().required(),
-    collectionId: Joi.string().required(),
-    latitude: Joi.number().required().min(-90).max(90),
-    longitude: Joi.number().required().min(-180).max(180),
-    timestamp: Joi.string().required(),
-    species: Joi.string().required(),
-    quantity: Joi.number().required().positive(),
-    quality: Joi.object().optional(),
-  }),
-};
-
 module.exports = {
   createUser,
   getUsers,
@@ -108,5 +120,4 @@ module.exports = {
   deleteUser,
   enrollUserBlockchain,
   queryParticipants,
-  createHerbBatch,
 };

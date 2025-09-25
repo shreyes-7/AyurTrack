@@ -4,7 +4,12 @@ const userRoute = require('./user.route');
 const docsRoute = require('./docs.route');
 const config = require('../../config/config');
 const herbRoute = require('./herb.route');
-
+const batchRoute = require('./batch.route');
+const collectionRoute = require('./collection.route');
+const formulationRoute = require('./formulation.route');
+const processingRoute = require('./processing.route');
+const qualityTestRoute = require('./qualityTest.route');
+const consumerRoute = require('./consumer.route');
 const router = express.Router();
 
 const defaultRoutes = [
@@ -19,6 +24,30 @@ const defaultRoutes = [
   {
     path: '/herbs',
     route: herbRoute,
+  },
+  {
+    path: '/batches',
+    route: batchRoute,
+  },
+  {
+    path: '/collections',
+    route: collectionRoute,
+  },
+  {
+    path: '/formulations',
+    route: formulationRoute,
+  },
+  {
+    path: '/processing',
+    route: processingRoute,
+  },
+  {
+    path: '/quality-tests',
+    route: qualityTestRoute,
+  },
+  {
+    path: '/consumer',
+    route: consumerRoute,
   }
 ];
 

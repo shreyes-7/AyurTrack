@@ -1,3 +1,9 @@
 module.exports.authController = require('./auth.controller');
 module.exports.userController = require('./user.controller');
 module.exports.herbController = require('./herb.controller');
+module.exports.batchController = require('./batch.controller');
+module.exports.collectionController = require('./collection.controller');
+module.exports.formulationController = require('./formulation.controller');
+module.exports.processingController = require('./processing.controller');
+module.exports.qualityTestController = require('./qualityTest.controller');
+module.exports.consumerController = require('./consumer.controller');

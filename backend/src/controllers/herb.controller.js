@@ -2,14 +2,16 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const HerbService = require('../services/herb.service');
+const pick = require('../utils/pick');
 
 class HerbController {
 
+    // Basic CRUD Operations
     static createHerb = catchAsync(async (req, res) => {
         const result = await HerbService.createHerb(req.body);
         res.status(httpStatus.CREATED).json({
             success: true,
-            message: 'Herb master record created successfully',
+            message: 'Herb created successfully',
             data: result
         });
     });
@@ -22,11 +24,22 @@ class HerbController {
         });
     });
 
+    static getAllHerbs = catchAsync(async (req, res) => {
+        const filter = pick(req.query, ['id', 'name', 'category', 'scientificName', 'hasSpeciesRules']);
+        const options = pick(req.query, ['page', 'limit', 'sortBy']);
+
+        const result = await HerbService.getAllHerbs(filter, options);
+        res.status(httpStatus.OK).json({
+            success: true,
+            data: result
+        });
+    });
+
     static updateHerb = catchAsync(async (req, res) => {
         const result = await HerbService.updateHerb(req.params.id, req.body);
         res.status(httpStatus.OK).json({
             success: true,
-            message: 'Herb master record updated successfully',
+            message: 'Herb updated successfully',
             data: result
         });
     });
@@ -35,64 +48,64 @@ class HerbController {
         const result = await HerbService.deleteHerb(req.params.id);
         res.status(httpStatus.OK).json({
             success: true,
-            message: 'Herb master record deleted successfully',
+            message: 'Herb deleted successfully',
             data: result
         });
     });
 
-    static getAllHerbs = catchAsync(async (req, res) => {
-        const filter = {
-            id: req.query.id,
-            name: req.query.name,
-            category: req.query.category,
-            scientificName: req.query.scientificName
-        };
-
-        Object.keys(filter).forEach(key => {
-            if (filter[key] === undefined) delete filter[key];
+    // Species Rules Management
+    static updateSpeciesRules = catchAsync(async (req, res) => {
+        const result = await HerbService.updateSpeciesRules(req.params.id, req.body);
+        res.status(httpStatus.OK).json({
+            success: true,
+            message: 'Species rules updated successfully',
+            data: result
         });
+    });
 
-        const result = await HerbService.getAllHerbs(filter);
+    static getSpeciesRules = catchAsync(async (req, res) => {
+        const result = await HerbService.getSpeciesRules(req.params.id);
         res.status(httpStatus.OK).json({
             success: true,
             data: result
         });
     });
 
-    static getHerbsByCategory = catchAsync(async (req, res) => {
-        const options = {
-            page: parseInt(req.query.page) || 1,
-            limit: parseInt(req.query.limit) || 10
-        };
+    // Validation Endpoints
+    static validateLocation = catchAsync(async (req, res) => {
+        const { id } = req.params;
+        const { latitude, longitude } = req.body;
 
-        const result = await HerbService.getHerbsByCategory(req.params.category, options);
+        const result = await HerbService.validateLocationForCollection(id, latitude, longitude);
         res.status(httpStatus.OK).json({
             success: true,
-            data: result
+            validation: result
         });
     });
 
-    static searchHerbs = catchAsync(async (req, res) => {
-        const { q: searchTerm } = req.query;
-        if (!searchTerm) {
-            return res.status(httpStatus.BAD_REQUEST).json({
-                success: false,
-                message: 'Search term is required'
-            });
-        }
+    static validateHarvestSeason = catchAsync(async (req, res) => {
+        const { id } = req.params;
+        const { month } = req.query;
 
-        const options = {
-            page: parseInt(req.query.page) || 1,
-            limit: parseInt(req.query.limit) || 10
-        };
-
-        const result = await HerbService.searchHerbs(searchTerm, options);
+        const result = await HerbService.validateHarvestSeason(id, month ? parseInt(month) : null);
         res.status(httpStatus.OK).json({
             success: true,
-            data: result
+            validation: result
         });
     });
 
+    static validateQuality = catchAsync(async (req, res) => {
+        const { id } = req.params;
+        const qualityData = req.body;
+
+        const result = await HerbService.validateQualityParameters(id, qualityData);
+        res.status(httpStatus.OK).json({
+            success: true,
+            validation: result
+        });
+    });
+
+    // Blockchain Operations
     static checkBlockchainStatus = catchAsync(async (req, res) => {
         const status = await HerbService.checkBlockchainStatus();
         res.status(httpStatus.OK).json({
@@ -101,22 +114,10 @@ class HerbController {
         });
     });
 
-    // NEW BLOCKCHAIN METHODS ADDED
-    static initializeBlockchain = catchAsync(async (req, res) => {
-        console.log('🚀 Received blockchain initialization request');
-        const result = await HerbService.initializeBlockchain();
-        
-        res.status(result.status === 'SUCCESS' ? httpStatus.OK : httpStatus.INTERNAL_SERVER_ERROR).json({
-            success: result.status === 'SUCCESS',
-            message: result.message,
-            data: result.result || null
-        });
-    });
-
     static getBlockchainData = catchAsync(async (req, res) => {
         const dataType = req.params.type || req.query.type || 'farmers';
         const result = await HerbService.getBlockchainData(dataType);
-        
+
         if (result.status === 'SUCCESS') {
             res.status(httpStatus.OK).json({
                 success: true,
@@ -132,10 +133,28 @@ class HerbController {
         }
     });
 
-    // ADDITIONAL BLOCKCHAIN UTILITY METHODS
+    static getBlockchainSpeciesRules = catchAsync(async (req, res) => {
+        const { id } = req.params;
+        const result = await HerbService.getBlockchainSpeciesRules(id);
+
+        if (result.status === 'SUCCESS') {
+            res.status(httpStatus.OK).json({
+                success: true,
+                message: 'Blockchain species rules retrieved successfully',
+                data: result.data
+            });
+        } else {
+            res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: result.message
+            });
+        }
+    });
+
+    // Specific blockchain data endpoints
     static getBlockchainFarmers = catchAsync(async (req, res) => {
         const result = await HerbService.getBlockchainData('farmers');
-        
+
         res.status(httpStatus.OK).json({
             success: result.status === 'SUCCESS',
             message: result.status === 'SUCCESS' ? 'Farmers retrieved successfully' : result.message,
@@ -146,7 +165,7 @@ class HerbController {
 
     static getBlockchainBatches = catchAsync(async (req, res) => {
         const result = await HerbService.getBlockchainData('batches');
-        
+
         res.status(httpStatus.OK).json({
             success: result.status === 'SUCCESS',
             message: result.status === 'SUCCESS' ? 'Herb batches retrieved successfully' : result.message,
@@ -155,93 +174,43 @@ class HerbController {
         });
     });
 
-    static getBlockchainSpecies = catchAsync(async (req, res) => {
-        const result = await HerbService.getBlockchainData('species');
-        
-        res.status(httpStatus.OK).json({
-            success: result.status === 'SUCCESS',
-            message: result.status === 'SUCCESS' ? 'Species rules retrieved successfully' : result.message,
-            count: result.data ? result.data.length : 0,
-            data: result.data || []
-        });
-    });
-
-    static getBlockchainProcessors = catchAsync(async (req, res) => {
-        const result = await HerbService.getBlockchainData('processors');
-        
-        res.status(httpStatus.OK).json({
-            success: result.status === 'SUCCESS',
-            message: result.status === 'SUCCESS' ? 'Processors retrieved successfully' : result.message,
-            count: result.data ? result.data.length : 0,
-            data: result.data || []
-        });
-    });
-
-    static getBlockchainLabs = catchAsync(async (req, res) => {
-        const result = await HerbService.getBlockchainData('labs');
-        
-        res.status(httpStatus.OK).json({
-            success: result.status === 'SUCCESS',
-            message: result.status === 'SUCCESS' ? 'Labs retrieved successfully' : result.message,
-            count: result.data ? result.data.length : 0,
-            data: result.data || []
-        });
-    });
-
-    static getBlockchainManufacturers = catchAsync(async (req, res) => {
-        const result = await HerbService.getBlockchainData('manufacturers');
-        
-        res.status(httpStatus.OK).json({
-            success: result.status === 'SUCCESS',
-            message: result.status === 'SUCCESS' ? 'Manufacturers retrieved successfully' : result.message,
-            count: result.data ? result.data.length : 0,
-            data: result.data || []
-        });
-    });
-
-    // TEST BLOCKCHAIN CONNECTION METHOD
-    static testBlockchainConnection = catchAsync(async (req, res) => {
-        const startTime = Date.now();
-        
-        try {
-            // Test multiple operations
-            const farmersResult = await HerbService.getBlockchainData('farmers');
-            const speciesResult = await HerbService.getBlockchainData('species');
-            
-            const endTime = Date.now();
-            const responseTime = endTime - startTime;
-
-            res.status(httpStatus.OK).json({
-                success: true,
-                message: 'Blockchain connection test completed',
-                testResults: {
-                    farmersTest: {
-                        success: farmersResult.status === 'SUCCESS',
-                        count: farmersResult.data ? farmersResult.data.length : 0,
-                        error: farmersResult.status === 'ERROR' ? farmersResult.message : null
-                    },
-                    speciesTest: {
-                        success: speciesResult.status === 'SUCCESS',
-                        count: speciesResult.data ? speciesResult.data.length : 0,
-                        error: speciesResult.status === 'ERROR' ? speciesResult.message : null
-                    },
-                    performance: {
-                        responseTime: `${responseTime}ms`,
-                        timestamp: new Date().toISOString()
-                    }
-                }
-            });
-        } catch (error) {
-            const endTime = Date.now();
-            const responseTime = endTime - startTime;
-            
-            res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+    // Search functionality
+    static searchHerbs = catchAsync(async (req, res) => {
+        const { q: searchTerm } = req.query;
+        if (!searchTerm) {
+            return res.status(httpStatus.BAD_REQUEST).json({
                 success: false,
-                message: 'Blockchain connection test failed',
-                error: error.message,
-                responseTime: `${responseTime}ms`
+                message: 'Search term is required'
             });
         }
+
+        const options = pick(req.query, ['page', 'limit']);
+
+        try {
+            const result = await HerbService.searchHerbs(searchTerm, options);
+            res.status(httpStatus.OK).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: 'Search failed',
+                error: error.message
+            });
+        }
+    });
+
+    // Category-based retrieval
+    static getHerbsByCategory = catchAsync(async (req, res) => {
+        const { category } = req.params;
+        const options = pick(req.query, ['page', 'limit']);
+
+        const result = await HerbService.getAllHerbs({ category }, options);
+        res.status(httpStatus.OK).json({
+            success: true,
+            data: result
+        });
     });
 }
 
