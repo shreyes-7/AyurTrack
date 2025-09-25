@@ -14,13 +14,22 @@ export default function FarmerCollectionPage() {
   // Get farmer info from session/context (this should come from authentication)
   const [farmerInfo, setFarmerInfo] = useState(null);
   
+  // Default quality parameters - these will be used automatically (hidden from UI)
+  const defaultQualityParams = {
+    moistureLevel: "8.5",
+    pesticidePPM: "1.2",
+    qualityNotes: "High quality herbs collected with standard organic farming practices"
+  };
+  
   const [formData, setFormData] = useState({
     // User inputs
     species: "",
     quantity: "",
-    moistureLevel: "",
-    pesticidePPM: "",
-    qualityNotes: "",
+    
+    // Auto-applied quality parameters (no user input needed, hidden from UI)
+    moistureLevel: defaultQualityParams.moistureLevel,
+    pesticidePPM: defaultQualityParams.pesticidePPM,
+    qualityNotes: defaultQualityParams.qualityNotes,
     
     // Auto-generated fields (backend will generate these)
     batchId: "",
@@ -124,8 +133,6 @@ export default function FarmerCollectionPage() {
       case 1:
         return formData.species && formData.quantity;
       case 2:
-        return formData.moistureLevel && formData.pesticidePPM;
-      case 3:
         return formData.gpsLat && formData.gpsLng && formData.timestamp;
       default:
         return true;
@@ -134,7 +141,7 @@ export default function FarmerCollectionPage() {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 3));
+      setCurrentStep(prev => Math.min(prev + 1, 2));
     } else {
       alert("Please fill in all required fields for this step.");
     }
@@ -147,7 +154,7 @@ export default function FarmerCollectionPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
+    if (!validateStep(1) || !validateStep(2)) {
       alert("Please fill in all required fields");
       return;
     }
@@ -158,6 +165,7 @@ export default function FarmerCollectionPage() {
     }
 
     // Prepare data in the format expected by the chaincode
+    // Quality parameters are automatically included from default values
     const submissionData = {
       collectorId: farmerInfo.blockchainUserId,
       lat: parseFloat(formData.gpsLat),
@@ -173,7 +181,7 @@ export default function FarmerCollectionPage() {
       unit: formData.unit
     };
 
-    console.log("Submitting collection data:", submissionData);
+    console.log("Submitting collection data with default quality params:", submissionData);
     await submit(submissionData);
   };
 
@@ -203,10 +211,10 @@ export default function FarmerCollectionPage() {
             )}
           </div>
 
-          {/* Progress Indicator */}
+          {/* Progress Indicator - Now only shows 2 steps */}
           <div className="mb-8">
             <div className="flex items-center justify-center space-x-4">
-              {[1, 2, 3].map((step) => (
+              {[1, 2].map((step) => (
                 <div key={step} className="flex items-center">
                   <div className={`
                     w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium
@@ -217,7 +225,7 @@ export default function FarmerCollectionPage() {
                   `}>
                     {step}
                   </div>
-                  {step < 3 && (
+                  {step < 2 && (
                     <div className={`
                       w-16 h-1 mx-2
                       ${currentStep > step ? 'bg-gradient-to-r from-green-500 to-blue-500' : 'bg-gray-200'}
@@ -226,9 +234,8 @@ export default function FarmerCollectionPage() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-center mt-4 space-x-8">
+            <div className="flex justify-center mt-4 space-x-16">
               <span className="text-sm font-medium text-gray-600">Basic Info</span>
-              <span className="text-sm font-medium text-gray-600">Quality Parameters</span>
               <span className="text-sm font-medium text-gray-600">Location & Review</span>
             </div>
           </div>
@@ -351,115 +358,8 @@ export default function FarmerCollectionPage() {
                 </div>
               )}
 
-              {/* Step 2: Quality Parameters */}
+              {/* Step 2: Location & Timestamp */}
               {currentStep === 2 && (
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
-                    <span className="text-blue-600 mr-2">🔬</span>
-                    Quality Parameters
-                  </h2>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Moisture Level */}
-                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-lg border border-blue-200">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <span className="flex items-center">
-                          💧 Moisture Level *
-                        </span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          name="moistureLevel"
-                          value={formData.moistureLevel}
-                          onChange={handleChange}
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                          placeholder="e.g., 8.5"
-                        />
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                          <span className="text-gray-500 text-sm">%</span>
-                        </div>
-                      </div>
-                      <div className="mt-2 text-xs text-gray-600">
-                        Optimal range: 8-12% for most herbs
-                      </div>
-                    </div>
-
-                    {/* Pesticide PPM */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <span className="flex items-center">
-                          🧪 Pesticide PPM *
-                        </span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          name="pesticidePPM"
-                          value={formData.pesticidePPM}
-                          onChange={handleChange}
-                          step="0.1"
-                          min="0"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                          placeholder="e.g., 1.2"
-                        />
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                          <span className="text-gray-500 text-sm">ppm</span>
-                        </div>
-                      </div>
-                      <div className="mt-2 text-xs text-gray-600">
-                        Lower is better. Target: &lt;2.0 ppm
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quality Indicator */}
-                  {formData.moistureLevel && formData.pesticidePPM && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h3 className="font-semibold text-gray-800 mb-4">Quality Assessment</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                          <span className="text-sm font-medium">Moisture Level</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            parseFloat(formData.moistureLevel) <= 12 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {parseFloat(formData.moistureLevel) <= 12 ? 'Optimal' : 'High'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                          <span className="text-sm font-medium">Pesticide Level</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            parseFloat(formData.pesticidePPM) <= 2 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {parseFloat(formData.pesticidePPM) <= 2 ? 'Safe' : 'High'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quality Notes */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Additional Quality Notes (Optional)
-                    </label>
-                    <textarea
-                      name="qualityNotes"
-                      value={formData.qualityNotes}
-                      onChange={handleChange}
-                      rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder="Any additional observations about the herb quality, appearance, or special handling requirements..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Location & Timestamp */}
-              {currentStep === 3 && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
                     <span className="text-purple-600 mr-2">📍</span>
@@ -577,7 +477,7 @@ export default function FarmerCollectionPage() {
                     </div>
                   </div>
 
-                  {/* Final Review */}
+                  {/* Final Review - Quality parameters hidden but still in data */}
                   <div className="bg-white border border-gray-200 rounded-lg p-6">
                     <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
                       <span className="mr-2">📋</span>
@@ -595,12 +495,8 @@ export default function FarmerCollectionPage() {
                           <span className="font-medium">{formData.quantity ? `${formData.quantity} ${formData.unit}` : 'Not set'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Moisture:</span>
-                          <span className="font-medium">{formData.moistureLevel ? `${formData.moistureLevel}%` : 'Not set'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Pesticide PPM:</span>
-                          <span className="font-medium">{formData.pesticidePPM ? `${formData.pesticidePPM} ppm` : 'Not set'}</span>
+                          <span className="text-gray-600">Quality:</span>
+                          <span className="font-medium text-green-600">✓ Standard Parameters Applied</span>
                         </div>
                       </div>
                       
@@ -646,7 +542,7 @@ export default function FarmerCollectionPage() {
                 </div>
 
                 <div className="flex space-x-3">
-                  {currentStep < 3 ? (
+                  {currentStep < 2 ? (
                     <button
                       type="button"
                       onClick={handleNext}
@@ -673,7 +569,7 @@ export default function FarmerCollectionPage() {
                       
                       <button
                         type="submit"
-                        disabled={submitting || !validateStep(1) || !validateStep(2) || !validateStep(3)}
+                        disabled={submitting || !validateStep(1) || !validateStep(2)}
                         className={`
                           px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center
                           ${submitting
