@@ -4,6 +4,9 @@ import { apiEndpoints } from "../services/api";
 import { useSubmit } from "../hooks/useFetch";
 import { ButtonLoader } from "../Components/Loader";
 import Layout from "../Components/Layout";
+import axios from "axios";
+import { getAuthHeaders } from "../utils/tokenUtils";
+import { BASE_URL } from "../../api";
 
 // Test types configuration based on chaincode requirements
 const TEST_TYPES = [
@@ -51,10 +54,11 @@ const ACTIVE_COMPOUNDS_BY_SPECIES = {
   'Neem': { compound: 'azadirachtin', unit: 'ppm', min: 300 }
 };
 
-export default function LabTesterPage() {
+export default async function LabTesterPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [timestampStatus, setTimestampStatus] = useState('idle');
+  const headers= await getAuthHeaders()
   
   // Get lab info from session/context
   const [labInfo, setLabInfo] = useState(null);
@@ -234,6 +238,11 @@ export default function LabTesterPage() {
       timestamp: formData.timestamp
     };
 
+    const response = await axios.post(`${BASE_URL}//batch/:${bacthId}/test`, submissionData, { headers: headers });
+    if(response.data.success){
+      console.log("Quality test created:", response.data);
+
+    }
     console.log("Submitting quality test data:", submissionData);
     await submit(submissionData);
   };

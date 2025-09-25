@@ -4,7 +4,7 @@ import { ButtonLoader } from "../Components/Loader";
 import Layout from "../Components/Layout";
 import QRCodeDisplay from "../Components/QRCodeDisplay";
 import axios from "axios";
-
+import { getAuthHeaders } from '../utils/tokenUtils';
 import { BASE_URL } from "../../api";
 
 const PRODUCT_TYPES = [
@@ -59,7 +59,8 @@ const EXCIPIENTS_BY_TYPE = {
   ],
 };
 
-export default function ManufacturerBatchPage() {
+export default async function ManufacturerBatchPage() {
+  const headers = await getAuthHeaders();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [timestampStatus, setTimestampStatus] = useState("idle");
@@ -280,9 +281,7 @@ const handleSubmitFormulation = async (e) => {
 
     // Step 1: Create formulation on blockchain
     const response = await axios.post(`${BASE_URL}/formulations`, submissionData, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: headers
     });
 
     console.log('Formulation stored successfully:', response.data);
@@ -310,7 +309,7 @@ const handleSubmitFormulation = async (e) => {
   const generateQRCode = async (productBatchId) => {
   try {
     // Fixed: Use GET request to /:productBatchId/generate-qr
-    const response = await axios.get(`${BASE_URL}/${productBatchId}/generate-qr`);
+    const response = await axios.get(`${BASE_URL}/${productBatchId}/generate-qr`,{ headers: headers });
     
     if (response.data) {
       const qrToken = response.data; // Backend should return just the token string

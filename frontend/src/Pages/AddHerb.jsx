@@ -2,9 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Layout from "../Components/Layout";
+import { getAuthHeaders } from "../utils/tokenUtils";
+import { BASE_URL } from "../../api";
 
-export default function AddHerb() {
+export default async function AddHerb() {
   const navigate = useNavigate();
+  const headers= await getAuthHeaders()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -111,7 +114,7 @@ export default function AddHerb() {
     setSubmitting(true);
 
     try {
-      await axios.post("http://localhost:3000/v1/herbs", submissionData);
+      await axios.post(`${BASE_URL}/manageHerbs`, submissionData,{ headers: headers });
       setSuccess(true);
       setTimeout(() => navigate("/admin"), 2000);
     } catch (err) {
