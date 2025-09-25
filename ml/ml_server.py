@@ -11,7 +11,7 @@ app = Flask(__name__)
 # -------------------------------
 # Tesseract OCR
 # -------------------------------
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+#pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # -------------------------------
 # NLP Extraction Pipeline
