@@ -24,9 +24,8 @@ import {
   Leaf,
   UserPlus,
 } from "lucide-react";
+import { BASE_URL } from "../../api";
 
-
-// Mock data for admin functionality
 const mockUsers = [
   {
     id: 1,
@@ -80,7 +79,6 @@ const mockUsers = [
   },
 ];
 
-
 const mockActivities = [
   {
     id: 1,
@@ -129,7 +127,6 @@ const mockActivities = [
   },
 ];
 
-
 const mockAuditLogs = [
   {
     id: 1,
@@ -157,7 +154,6 @@ const mockAuditLogs = [
   },
 ];
 
-
 const roleOptions = [
   { value: "farmer", label: "Farmer", color: "bg-green-500" },
   { value: "collector", label: "Collector", color: "bg-blue-500" },
@@ -167,10 +163,9 @@ const roleOptions = [
   { value: "admin", label: "Admin", color: "bg-gray-500" },
 ];
 
-
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState([]);
   const [herbs, setHerbs] = useState([]);
   const [activities, setActivities] = useState(mockActivities);
   const [auditLogs, setAuditLogs] = useState(mockAuditLogs);
@@ -181,7 +176,41 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  
+
+  // Mock data for admin functionality
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/users`);
+      const apiUsers = response.data; // raw backend users
+
+      // Map backend users into mockUsers format
+      const formattedUsers = apiUsers.map((u, i) => ({
+        id: i + 1,
+        name: u.name,
+        email: u.email,
+        role: u.participantType || u.role,
+        status: u.isBlockchainEnrolled ? "active" : "inactive",
+        joinDate: u.createdAt
+          ? new Date(u.createdAt).toISOString().split("T")[0]
+          : "",
+        lastActive: u.updatedAt
+          ? new Date(u.updatedAt).toISOString().split("T")[0]
+          : "",
+        activities: u.activitiesCount || 0,
+      }));
+
+      console.log("Fetched Users:", formattedUsers); // <-- log here
+
+      setUsers(formattedUsers); // set state
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
   // Navigation handlers
   const handleAddHerb = () => {
     console.log("Navigating to add herb page...");
@@ -192,11 +221,10 @@ export default function AdminDashboard() {
     console.log("Navigating to create user page...");
     navigate("/create-user");
   };
-  
+
   const handleExportData = () => {
     ExportData.handleExport(activeTab, users, herbs, activities, auditLogs);
   };
-
 
   // Function to get role display information
   const getRoleInfo = (roleValue) => {
@@ -204,14 +232,12 @@ export default function AdminDashboard() {
     return role || { label: roleValue, color: "bg-gray-500" };
   };
 
-
   // Fetch herbs from API using axios
   const fetchHerbs = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:3000/v1/herbs");
-
+      const response = await axios.get(`${BASE_URL}/herbs`);
 
       // Use only actual API data
       const transformedHerbs = response.data.data.results.map((herb) => ({
@@ -223,7 +249,6 @@ export default function AdminDashboard() {
         parts: herb.parts,
       }));
 
-
       setHerbs(transformedHerbs);
     } catch (err) {
       console.error("Error fetching herbs:", err);
@@ -234,13 +259,11 @@ export default function AdminDashboard() {
     }
   };
 
-
   useEffect(() => {
     if (activeTab === "herbs") {
       fetchHerbs();
     }
   }, [activeTab]);
-
 
   // Filter users based on search and role
   const filteredUsers = users.filter((user) => {
@@ -250,7 +273,6 @@ export default function AdminDashboard() {
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
-
 
   // Filter herbs based on search and category
   const filteredHerbs = herbs.filter((herb) => {
@@ -267,14 +289,12 @@ export default function AdminDashboard() {
     return matchesSearch && matchesCategory;
   });
 
-
   // Filter activities based on search
   const filteredActivities = activities.filter(
     (activity) =>
       activity.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.action.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -293,7 +313,6 @@ export default function AdminDashboard() {
     }
   };
 
-
   const getStatusColor = (status) => {
     switch (status) {
       case "success":
@@ -310,7 +329,6 @@ export default function AdminDashboard() {
         return "text-gray-400 bg-gray-400/20";
     }
   };
-
 
   const getCategoryColor = (category) => {
     switch (category) {
@@ -330,7 +348,6 @@ export default function AdminDashboard() {
         return "bg-gray-100 text-gray-800";
     }
   };
-
 
   const handleRoleChange = (userId, newRole) => {
     setUsers(
@@ -352,7 +369,6 @@ export default function AdminDashboard() {
     ]);
   };
 
-
   const handleUserStatusChange = (userId, newStatus) => {
     setUsers(
       users.map((user) =>
@@ -361,18 +377,16 @@ export default function AdminDashboard() {
     );
   };
 
-
   const handleHerbEdit = (herbId) => {
     console.log("Edit herb:", herbId);
     // Navigate to edit herb page
     navigate(`/edit-herb/${herbId}`);
   };
 
-
   const handleHerbDelete = async (herbId) => {
     if (window.confirm("Are you sure you want to delete this herb?")) {
       try {
-        await axios.delete(`http://localhost:3000/v1/herbs/${herbId}`);
+        await axios.delete(`${BASE_URL}/herbs/${herbId}`);
         setHerbs(herbs.filter((herb) => herb.id !== herbId));
       } catch (err) {
         console.error("Error deleting herb:", err);
@@ -381,7 +395,6 @@ export default function AdminDashboard() {
       }
     }
   };
-
 
   const stats = [
     {
@@ -409,7 +422,6 @@ export default function AdminDashboard() {
       color: "from-red-500 to-rose-600",
     },
   ];
-
 
   const tabs = [
     {
@@ -439,7 +451,6 @@ export default function AdminDashboard() {
     },
   ];
 
-
   return (
     <Layout>
       <div className="space-y-6">
@@ -463,7 +474,6 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
-
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -493,7 +503,6 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-
         {/* Tab Navigation */}
         <div className="flex space-x-1 bg-green-100 p-1 rounded-lg">
           {tabs.map((tab) => (
@@ -511,7 +520,6 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
-
 
         {/* Tab Content */}
         <motion.div
@@ -553,7 +561,6 @@ export default function AdminDashboard() {
                 </div>
               </Card>
 
-
               {/* System Health */}
               <Card title="System Health">
                 <div className="space-y-4">
@@ -581,7 +588,6 @@ export default function AdminDashboard() {
               </Card>
             </div>
           )}
-
 
           {activeTab === "users" && (
             <Card title="User Management">
@@ -619,7 +625,6 @@ export default function AdminDashboard() {
                   Create New User
                 </button>
               </div>
-
 
               {/* Users Table */}
               <div className="overflow-x-auto">
@@ -690,7 +695,7 @@ export default function AdminDashboard() {
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
-                              <button 
+                              <button
                                 className="p-1 text-red-500 hover:text-red-700 transition"
                                 title="Delete user"
                               >
@@ -706,7 +711,6 @@ export default function AdminDashboard() {
               </div>
             </Card>
           )}
-
 
           {activeTab === "herbs" && (
             <Card title="Herb Management">
@@ -724,14 +728,12 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-
               {/* Error Message */}
               {error && (
                 <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded-lg mb-6">
                   {error}
                 </div>
               )}
-
 
               {/* Search and Filter */}
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -767,7 +769,6 @@ export default function AdminDashboard() {
                   <span>{loading ? "Refreshing..." : "Refresh"}</span>
                 </button>
               </div>
-
 
               {/* Herbs Table */}
               {loading ? (
@@ -856,7 +857,6 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
 
-
                   {filteredHerbs.length === 0 && !loading && (
                     <div className="text-center py-12">
                       <Leaf className="w-12 h-12 text-green-300 mx-auto mb-4" />
@@ -869,7 +869,6 @@ export default function AdminDashboard() {
               )}
             </Card>
           )}
-
 
           {activeTab === "activities" && (
             <Card title="Activity Tracking">
@@ -886,7 +885,6 @@ export default function AdminDashboard() {
                   />
                 </div>
               </div>
-
 
               {/* Activities List */}
               <div className="space-y-4">
@@ -934,7 +932,6 @@ export default function AdminDashboard() {
               </div>
             </Card>
           )}
-
 
           {activeTab === "audit" && (
             <Card title="Audit Logs">
