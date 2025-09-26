@@ -2,29 +2,102 @@
 
 const { Contract } = require('fabric-contract-api');
 
+// === CONFIG: set your Admin MSP ID here ===
+const ADMIN_MSP = 'Org1MSP';
+
 // --- Helpers ---
+
 function toJSONSafe(obj) {
-    try { return JSON.stringify(obj); } catch (e) { return JSON.stringify({error: 'stringify error'}); }
+    try {
+        return JSON.stringify(obj);
+    } catch (e) {
+        return JSON.stringify({ error: 'stringify error' });
+    }
 }
 
 // Haversine distance (meters)
 function haversineDistance(lat1, lon1, lat2, lon2) {
     const toRad = (v) => v * Math.PI / 180;
-    const R = 6371000;
+    const R = 6371000; // Earth radius in meters
+
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat/2) ** 2 +
-              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-              Math.sin(dLon/2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
 
 class AyurTrackContract extends Contract {
 
     /* -------------------------------------
-       Extended InitLedger with comprehensive sample data
-       ------------------------------------- */
+    Utility admin/identity helpers
+    ------------------------------------- */
+
+    // Returns true if invoker MSP is admin MSP
+    _isAdmin(ctx) {
+        const invokerMSP = ctx.clientIdentity.getMSPID();
+        return invokerMSP === ADMIN_MSP;
+    }
+
+    // Throws if invoker is not admin
+    _requireAdmin(ctx) {
+        if (!this._isAdmin(ctx)) {
+            throw new Error(`Admin privileges required. Invoker MSP ${ctx.clientIdentity.getMSPID()} is not admin (${ADMIN_MSP})`);
+        }
+    }
+
+    // Assert invoker MSP matches stored participant.mspId OR is admin (admin bypass)
+    async _assertInvokerMatchesParticipantMSP(ctx, type, id) {
+        const invokerMSP = ctx.clientIdentity.getMSPID();
+        // admin bypass allowed
+        if (invokerMSP === ADMIN_MSP) return true;
+
+        const key = `PARTICIPANT_${type}_${id}`;
+        const bytes = await ctx.stub.getState(key);
+        if (!bytes || bytes.length === 0) throw new Error(`Participant ${type}/${id} not registered`);
+        const p = JSON.parse(bytes.toString());
+        if (!p.mspId) throw new Error(`Participant ${type}/${id} missing mspId`);
+        if (p.mspId !== invokerMSP) throw new Error(`Invoker MSP (${invokerMSP}) does not match participant ${p.mspId}`);
+        return true;
+    }
+
+    // For batch-level update: allow admin OR invoker's MSP matches recordedByMSP OR invoker matches currentOwner participant's MSP
+    async _assertInvokerCanModifyBatch(ctx, batch) {
+        const invokerMSP = ctx.clientIdentity.getMSPID();
+        if (invokerMSP === ADMIN_MSP) return true;
+
+        // allow if invoker belongs to the org that recorded the batch
+        if (batch.recordedByMSP && batch.recordedByMSP === invokerMSP) return true;
+
+        // attempt to find participant for currentOwner across known participant types
+        if (batch.currentOwner) {
+            const ownerId = batch.currentOwner;
+            const types = ['farmer', 'processor', 'lab', 'manufacturer'];
+            for (const t of types) {
+                try {
+                    const key = `PARTICIPANT_${t}_${ownerId}`;
+                    const bytes = await ctx.stub.getState(key);
+                    if (bytes && bytes.length > 0) {
+                        const p = JSON.parse(bytes.toString());
+                        if (p.mspId && p.mspId === invokerMSP) return true;
+                    }
+                } catch (e) {
+                    // ignore and continue
+                }
+            }
+        }
+
+        throw new Error(`Invoker MSP ${invokerMSP} not authorized to modify batch ${batch.batchId || '(unknown id)'}`);
+    }
+
+    /* -------------------------------------
+    Extended InitLedger with comprehensive sample data
+    ------------------------------------- */
     async InitLedger(ctx) {
         console.info('=== InitLedger: setting up comprehensive sample data ===');
 
@@ -33,31 +106,31 @@ class AyurTrackContract extends Contract {
             {
                 species: 'Ashwagandha',
                 geofence: { center: { lat: 26.9, long: 75.8 }, radiusMeters: 50000 },
-                allowedMonths: [1,2,3,10,11,12],
+                allowedMonths: [1, 2, 3, 10, 11, 12],
                 qualityThresholds: { moistureMax: 10, pesticidePPMMax: 2 }
             },
             {
                 species: 'Tulsi',
                 geofence: { center: { lat: 28.6, long: 77.2 }, radiusMeters: 70000 },
-                allowedMonths: [4,5,6,7,8,9],
+                allowedMonths: [4, 5, 6, 7, 8, 9],
                 qualityThresholds: { moistureMax: 12, pesticidePPMMax: 1.5 }
             },
             {
                 species: 'Amla',
                 geofence: { center: { lat: 25.4, long: 82.0 }, radiusMeters: 60000 },
-                allowedMonths: [9,10,11,12],
+                allowedMonths: [9, 10, 11, 12],
                 qualityThresholds: { moistureMax: 8, pesticidePPMMax: 1 }
             },
             {
                 species: 'Turmeric',
                 geofence: { center: { lat: 13.0827, long: 80.2707 }, radiusMeters: 80000 },
-                allowedMonths: [2,3,4,11,12],
+                allowedMonths: [2, 3, 4, 11, 12],
                 qualityThresholds: { moistureMax: 8, pesticidePPMMax: 1.5, curcuminMin: 3.0 }
             },
             {
                 species: 'Neem',
                 geofence: { center: { lat: 23.2599, long: 77.4126 }, radiusMeters: 100000 },
-                allowedMonths: [6,7,8,9,10],
+                allowedMonths: [6, 7, 8, 9, 10],
                 qualityThresholds: { moistureMax: 12, pesticidePPMMax: 0.5 }
             }
         ];
@@ -84,7 +157,6 @@ class AyurTrackContract extends Contract {
                 name: 'Ravi Patel', location: 'Village Gujarat', mspId: 'Org1MSP',
                 contact: '+91-9876543212', certifications: ['Traditional']
             },
-
             // Processors (Org1MSP)
             {
                 docType: 'participant', type: 'processor', id: 'P001',
@@ -96,7 +168,6 @@ class AyurTrackContract extends Contract {
                 name: 'Herbal Processing Ltd', location: 'Bangalore Tech Park', mspId: 'Org1MSP',
                 license: 'PROC2024002', capacity: '2000kg/day'
             },
-
             // Labs (Org2MSP)
             {
                 docType: 'participant', type: 'lab', id: 'L001',
@@ -108,7 +179,6 @@ class AyurTrackContract extends Contract {
                 name: 'Advanced Herbal Testing', location: 'Mumbai', mspId: 'Org2MSP',
                 certification: 'ISO17025', accreditation: 'NABL'
             },
-
             // Manufacturers (Org2MSP)
             {
                 docType: 'participant', type: 'manufacturer', id: 'M001',
@@ -154,7 +224,7 @@ class AyurTrackContract extends Contract {
 
         for (const batch of sampleBatches) {
             await ctx.stub.putState(`HERBBATCH_${batch.batchId}`, Buffer.from(JSON.stringify(batch)));
-            
+
             // Create corresponding collection events
             const collection = {
                 docType: 'collectionEvent',
@@ -262,7 +332,6 @@ class AyurTrackContract extends Contract {
             await ctx.stub.putState(`FORM_${form.productBatchId}`, Buffer.from(JSON.stringify(form)));
             // Create QR token mappings
             await ctx.stub.putState(`BATCHQR_${form.qrToken}`, Buffer.from(form.productBatchId));
-            
             // Update input batches as used in formulation
             for (const batchId of form.inputBatches) {
                 const batchKey = `HERBBATCH_${batchId}`;
@@ -293,10 +362,12 @@ class AyurTrackContract extends Contract {
     }
 
     /* -------------------------------------
-       Participant registry
-       ------------------------------------- */
-
+    Participant registry (admin-only management)
+    ------------------------------------- */
     async CreateParticipant(ctx, participantJson) {
+        // Admin-only: creating participants is privileged
+        this._requireAdmin(ctx);
+
         const p = JSON.parse(participantJson);
         if (!p.type || !p.id || !p.mspId) throw new Error('participant must have type, id and mspId');
         const key = `PARTICIPANT_${p.type}_${p.id}`;
@@ -326,19 +397,10 @@ class AyurTrackContract extends Contract {
         return JSON.stringify(res);
     }
 
-    // helper: ensure caller's MSP matches stored participant mspId (simple role enforcement)
-    async _assertInvokerMatchesParticipantMSP(ctx, type, id) {
-        const invokerMSP = ctx.clientIdentity.getMSPID();
-        const key = `PARTICIPANT_${type}_${id}`;
-        const bytes = await ctx.stub.getState(key);
-        if (!bytes || bytes.length === 0) throw new Error(`Participant ${type}/${id} not registered`);
-        const p = JSON.parse(bytes.toString());
-        if (!p.mspId) throw new Error(`Participant ${type}/${id} missing mspId`);
-        if (p.mspId !== invokerMSP) throw new Error(`Invoker MSP (${invokerMSP}) does not match participant ${p.mspId}`);
-        return true;
-    }
-
+    // Update participant: admin-only (sensitive)
     async UpdateParticipant(ctx, type, id, updatedJson) {
+        this._requireAdmin(ctx);
+
         const key = `PARTICIPANT_${type}_${id}`;
         const bytes = await ctx.stub.getState(key);
         if (!bytes || bytes.length === 0) throw new Error(`Participant ${type}/${id} not found`);
@@ -348,7 +410,10 @@ class AyurTrackContract extends Contract {
         return updated;
     }
 
+    // Delete participant: admin-only (sensitive)
     async DeleteParticipant(ctx, type, id) {
+        this._requireAdmin(ctx);
+
         const key = `PARTICIPANT_${type}_${id}`;
         const bytes = await ctx.stub.getState(key);
         if (!bytes || bytes.length === 0) throw new Error(`Participant ${type}/${id} not found`);
@@ -357,10 +422,12 @@ class AyurTrackContract extends Contract {
     }
 
     /* -------------------------------------
-       Species rules
-       ------------------------------------- */
-
+    Species rules (admin-only)
+    ------------------------------------- */
     async SetSpeciesRules(ctx, species, rulesJson) {
+        // Admin-only
+        this._requireAdmin(ctx);
+
         const rules = JSON.parse(rulesJson);
         await ctx.stub.putState(`SPECIES_RULES_${species}`, Buffer.from(JSON.stringify(rules)));
         return rules;
@@ -373,30 +440,33 @@ class AyurTrackContract extends Contract {
     }
 
     /* -------------------------------------
-       Collection / Herb batch
-       ------------------------------------- */
-
+    Collection / Herb batch
+    ------------------------------------- */
     async CreateHerbBatch(ctx, batchId, collectionId, collectorId, latStr, longStr, timestamp, species, quantityStr, qualityJson) {
         // enforce caller matches participant (so only the farmer org owning the farmer id can call)
+        // Admin MSP may bypass this and create on behalf of farmers
         await this._assertInvokerMatchesParticipantMSP(ctx, 'farmer', collectorId);
 
         const lat = parseFloat(latStr);
         const long = parseFloat(longStr);
         const quantity = parseFloat(quantityStr);
-        const quality = (qualityJson && qualityJson.length>0) ? JSON.parse(qualityJson) : {};
+        const quality = (qualityJson && qualityJson.length > 0) ? JSON.parse(qualityJson) : {};
 
         // validate rules if present
         const rulesBytes = await ctx.stub.getState(`SPECIES_RULES_${species}`);
         if (rulesBytes && rulesBytes.length > 0) {
             const rules = JSON.parse(rulesBytes.toString());
+
             if (rules.geofence) {
                 const dist = haversineDistance(rules.geofence.center.lat, rules.geofence.center.long, lat, long);
                 if (dist > rules.geofence.radiusMeters) throw new Error(`Collection outside geofence by ${Math.round(dist)} meters`);
             }
+
             if (Array.isArray(rules.allowedMonths) && timestamp) {
-                const month = new Date(timestamp).getMonth()+1;
+                const month = new Date(timestamp).getMonth() + 1;
                 if (!rules.allowedMonths.includes(month)) throw new Error(`Collection month ${month} not allowed for species ${species}`);
             }
+
             if (rules.qualityThresholds) {
                 if ('moisture' in quality && quality.moisture > rules.qualityThresholds.moistureMax) throw new Error(`Moisture (${quality.moisture}) exceeds allowed max (${rules.qualityThresholds.moistureMax})`);
                 if ('pesticidePPM' in quality && quality.pesticidePPM > rules.qualityThresholds.pesticidePPMMax) throw new Error(`Pesticide (${quality.pesticidePPM}) exceeds allowed max (${rules.qualityThresholds.pesticidePPMMax})`);
@@ -404,6 +474,7 @@ class AyurTrackContract extends Contract {
         }
 
         const invokerMSP = ctx.clientIdentity.getMSPID();
+
         const batch = {
             docType: 'herbBatch',
             batchId,
@@ -433,6 +504,7 @@ class AyurTrackContract extends Contract {
             quality,
             recordedByMSP: invokerMSP
         };
+
         await ctx.stub.putState(`COLLECTION_${collectionId}`, Buffer.from(JSON.stringify(collection)));
 
         return batch;
@@ -449,13 +521,22 @@ class AyurTrackContract extends Contract {
         const key = `HERBBATCH_${batchId}`;
         const bytes = await ctx.stub.getState(key);
         if (!bytes || bytes.length === 0) throw new Error(`Herb batch ${batchId} not found`);
+
         const current = JSON.parse(bytes.toString());
+
+        // Only allowed if invoker can modify batch (owner org / recorder MSP) or admin
+        await this._assertInvokerCanModifyBatch(ctx, current);
+
         const updated = { ...current, ...JSON.parse(updatedJson) };
         await ctx.stub.putState(key, Buffer.from(JSON.stringify(updated)));
+
         return updated;
     }
 
+    // Deleting batches is sensitive: admin-only
     async DeleteHerbBatch(ctx, batchId) {
+        this._requireAdmin(ctx);
+
         const key = `HERBBATCH_${batchId}`;
         const bytes = await ctx.stub.getState(key);
         if (!bytes || bytes.length === 0) throw new Error(`Herb batch ${batchId} not found`);
@@ -475,14 +556,13 @@ class AyurTrackContract extends Contract {
     }
 
     /* -------------------------------------
-       Processing steps
-       ------------------------------------- */
-
+    Processing steps
+    ------------------------------------- */
     async AddProcessingStep(ctx, processId, batchId, facilityId, stepType, paramsJson, timestamp) {
         // only processor org that registered facilityId may call
+        // admin MSP can bypass and add steps on behalf of processors
         await this._assertInvokerMatchesParticipantMSP(ctx, 'processor', facilityId);
-
-        const params = (paramsJson && paramsJson.length>0) ? JSON.parse(paramsJson) : {};
+        const params = (paramsJson && paramsJson.length > 0) ? JSON.parse(paramsJson) : {};
         const invokerMSP = ctx.clientIdentity.getMSPID();
 
         const proc = {
@@ -495,6 +575,7 @@ class AyurTrackContract extends Contract {
             timestamp,
             recordedByMSP: invokerMSP
         };
+
         await ctx.stub.putState(`PROCESS_${processId}`, Buffer.from(JSON.stringify(proc)));
 
         // update batch status
@@ -511,14 +592,12 @@ class AyurTrackContract extends Contract {
     }
 
     /* -------------------------------------
-       Quality tests (labs)
-       ------------------------------------- */
-
+    Quality tests (labs)
+    ------------------------------------- */
     async AddQualityTest(ctx, testId, batchId, labId, testType, resultsJson, timestamp) {
-        // only lab org that owns labId can call
+        // only lab org that owns labId can call; admin MSP can bypass
         await this._assertInvokerMatchesParticipantMSP(ctx, 'lab', labId);
-
-        const results = (resultsJson && resultsJson.length>0) ? JSON.parse(resultsJson) : {};
+        const results = (resultsJson && resultsJson.length > 0) ? JSON.parse(resultsJson) : {};
         const invokerMSP = ctx.clientIdentity.getMSPID();
 
         const test = {
@@ -531,6 +610,7 @@ class AyurTrackContract extends Contract {
             timestamp,
             recordedByMSP: invokerMSP
         };
+
         await ctx.stub.putState(`QUALITY_${testId}`, Buffer.from(JSON.stringify(test)));
 
         // update batch with lastQualityTest, and mark fail if thresholds exceeded
@@ -539,14 +619,18 @@ class AyurTrackContract extends Contract {
         if (batchBytes && batchBytes.length > 0) {
             const batch = JSON.parse(batchBytes.toString());
             batch.lastQualityTest = testId;
+
             const rulesBytes = await ctx.stub.getState(`SPECIES_RULES_${batch.species}`);
             if (rulesBytes && rulesBytes.length > 0) {
                 const rules = JSON.parse(rulesBytes.toString());
                 if (rules.qualityThresholds) {
-                    if ('moisture' in results && results.moisture > rules.qualityThresholds.moistureMax) batch.status = 'quality_fail';
-                    if ('pesticidePPM' in results && results.pesticidePPM > rules.qualityThresholds.pesticidePPMMax) batch.status = 'quality_fail';
+                    if ('moisture' in results && results.moisture > rules.qualityThresholds.moistureMax)
+                        batch.status = 'quality_fail';
+                    if ('pesticidePPM' in results && results.pesticidePPM > rules.qualityThresholds.pesticidePPMMax)
+                        batch.status = 'quality_fail';
                 }
             }
+
             await ctx.stub.putState(batchKey, Buffer.from(JSON.stringify(batch)));
         }
 
@@ -554,15 +638,14 @@ class AyurTrackContract extends Contract {
     }
 
     /* -------------------------------------
-       Formulation / final product
-       ------------------------------------- */
-
+    Formulation / final product
+    ------------------------------------- */
     async CreateFormulation(ctx, productBatchId, manufacturerId, inputBatchesJson, formulationParamsJson, timestamp) {
-        // only manufacturer org that owns manufacturerId can call
+        // only manufacturer org that owns manufacturerId can call; admin may bypass
         await this._assertInvokerMatchesParticipantMSP(ctx, 'manufacturer', manufacturerId);
 
-        const inputBatches = (inputBatchesJson && inputBatchesJson.length>0) ? JSON.parse(inputBatchesJson) : [];
-        const params = (formulationParamsJson && formulationParamsJson.length>0) ? JSON.parse(formulationParamsJson) : {};
+        const inputBatches = (inputBatchesJson && inputBatchesJson.length > 0) ? JSON.parse(inputBatchesJson) : [];
+        const params = (formulationParamsJson && formulationParamsJson.length > 0) ? JSON.parse(formulationParamsJson) : {};
         const invokerMSP = ctx.clientIdentity.getMSPID();
 
         const form = {
@@ -579,7 +662,7 @@ class AyurTrackContract extends Contract {
         for (const bid of inputBatches) {
             const batchKey = `HERBBATCH_${bid}`;
             const batchBytes = await ctx.stub.getState(batchKey);
-            if (batchBytes && batchBytes.length>0) {
+            if (batchBytes && batchBytes.length > 0) {
                 const batch = JSON.parse(batchBytes.toString());
                 batch.status = 'used_in_formulation';
                 batch.currentOwner = manufacturerId;
@@ -590,6 +673,7 @@ class AyurTrackContract extends Contract {
         }
 
         await ctx.stub.putState(`FORM_${productBatchId}`, Buffer.from(JSON.stringify(form)));
+
         return form;
     }
 
@@ -597,28 +681,29 @@ class AyurTrackContract extends Contract {
         // token optional
         let t = token;
         if (!t || t.length === 0) t = `${productBatchId}_${Date.now()}`;
+
         await ctx.stub.putState(`BATCHQR_${t}`, Buffer.from(productBatchId));
 
         const formKey = `FORM_${productBatchId}`;
         const formBytes = await ctx.stub.getState(formKey);
-        if (formBytes && formBytes.length>0) {
+        if (formBytes && formBytes.length > 0) {
             const form = JSON.parse(formBytes.toString());
             form.qrToken = t;
             await ctx.stub.putState(formKey, Buffer.from(JSON.stringify(form)));
         }
+
         return t;
     }
 
     /* -------------------------------------
-       Provenance
-       ------------------------------------- */
-
+    Provenance
+    ------------------------------------- */
     async GetProvenance(ctx, productBatchId) {
         const formKey = `FORM_${productBatchId}`;
         const formBytes = await ctx.stub.getState(formKey);
         if (!formBytes || formBytes.length === 0) throw new Error(`Formulation ${productBatchId} not found`);
-        const form = JSON.parse(formBytes.toString());
 
+        const form = JSON.parse(formBytes.toString());
         const bundle = {
             productBatchId: form.productBatchId,
             manufacturerId: form.manufacturerId,
@@ -631,13 +716,13 @@ class AyurTrackContract extends Contract {
             const batchKey = `HERBBATCH_${bid}`;
             const batchBytes = await ctx.stub.getState(batchKey);
             const item = {};
-            if (batchBytes && batchBytes.length>0) {
+            if (batchBytes && batchBytes.length > 0) {
                 const batch = JSON.parse(batchBytes.toString());
                 item.batch = batch;
 
                 const collKey = `COLLECTION_${batch.collectionId}`;
                 const collBytes = await ctx.stub.getState(collKey);
-                if (collBytes && collBytes.length>0) item.collection = JSON.parse(collBytes.toString());
+                if (collBytes && collBytes.length > 0) item.collection = JSON.parse(collBytes.toString());
 
                 // process steps
                 item.processSteps = [];
@@ -667,26 +752,26 @@ class AyurTrackContract extends Contract {
                 if (batch.collectorId) {
                     const pk = `PARTICIPANT_farmer_${batch.collectorId}`;
                     const pbytes = await ctx.stub.getState(pk);
-                    if (pbytes && pbytes.length>0) item.collectorProfile = JSON.parse(pbytes.toString());
+                    if (pbytes && pbytes.length > 0) item.collectorProfile = JSON.parse(pbytes.toString());
                 }
             } else {
                 item.error = 'batch not found';
             }
+
             bundle.inputBatches.push(item);
         }
 
         // manufacturer profile
         const manKey = `PARTICIPANT_manufacturer_${form.manufacturerId}`;
         const mBytes = await ctx.stub.getState(manKey);
-        if (mBytes && mBytes.length>0) bundle.manufacturerProfile = JSON.parse(mBytes.toString());
+        if (mBytes && mBytes.length > 0) bundle.manufacturerProfile = JSON.parse(mBytes.toString());
 
         return JSON.stringify(bundle);
     }
 
     /* -------------------------------------
-       Generic helpers
-       ------------------------------------- */
-
+    Generic helpers
+    ------------------------------------- */
     async QueryByPrefix(ctx, prefix) {
         const start = prefix;
         const end = prefix + '\uffff';
@@ -695,15 +780,21 @@ class AyurTrackContract extends Contract {
         let r = await it.next();
         while (!r.done) {
             if (r.value && r.value.value) {
-                try { result.push(JSON.parse(r.value.value.toString('utf8'))); }
-                catch (e) { result.push(r.value.value.toString('utf8')); }
+                try {
+                    result.push(JSON.parse(r.value.value.toString('utf8')));
+                } catch (e) {
+                    result.push(r.value.value.toString('utf8'));
+                }
             }
             r = await it.next();
         }
         return JSON.stringify(result);
     }
 
+    // Generic delete by key: admin-only because it's a destructive helper
     async DeleteByKey(ctx, key) {
+        this._requireAdmin(ctx);
+
         const bytes = await ctx.stub.getState(key);
         if (!bytes || bytes.length === 0) throw new Error(`Key ${key} not found`);
         await ctx.stub.deleteState(key);
