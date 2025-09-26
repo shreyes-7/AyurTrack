@@ -1,8 +1,8 @@
 const httpStatus = require('http-status');
 const { User } = require('../models');
-const blockchainService = require('./blockchain.service');
 const ApiError = require('../utils/ApiError');
 const { sendMail } = require('../config/sendMail');
+const { registerAndEnrollUser, getContract, userExists, safeDisconnect } = require('../../fabric/fabricClient');
 
 /**
  * Create a user with enhanced blockchain enrollment
@@ -11,6 +11,7 @@ const createUser = async (userBody) => {
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
+  
   const generatePassword = () => {
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     const numbers = "0123456789";
@@ -31,10 +32,8 @@ const createUser = async (userBody) => {
 
     // Shuffle password to avoid predictable pattern
     password = password.split('').sort(() => 0.5 - Math.random()).join('');
-
     return password;
   };
-
 
   const generatedPassword = generatePassword();
   console.log("Generated Password:", generatedPassword);
@@ -58,36 +57,30 @@ const createUser = async (userBody) => {
   
   const subject = "Your Account is Created!";
   const html = `
-  <p>Hi ${user.name},</p>
-  <p>Your account has been created by the admin.</p>
-  <p><strong>Email:</strong> ${user.email}</p>
-  <p><strong>Password:</strong> ${user.password}</p> 
-  <p>Cheers,<br/>Team, AyurTrace</p>
-`;
+    <p>Hi ${user.name},</p>
+    <p>Your account has been created by the admin.</p>
+    <p><strong>Email:</strong> ${user.email}</p>
+    <p><strong>Password:</strong> ${generatedPassword}</p> 
+    <p>Cheers,<br/>Team, AyurTrace</p>
+  `;
 
-  await sendMail(user.email, subject, html);
-
+  try {
+    await sendMail(user.email, subject, html);
+    console.log(`✅ Welcome email sent to ${user.email}`);
+  } catch (error) {
+    console.error(`❌ Failed to send email to ${user.email}:`, error.message);
+  }
 
   // Attempt blockchain enrollment for supply chain participants
   if (userBody.participantType !== 'user' && userBody.fabricOrganization) {
     setImmediate(async () => {
       try {
         console.log(`🔗 Attempting blockchain enrollment for user: ${user.email}`);
-
-        const enrollmentResult = await blockchainService.enrollUser(
-          user.blockchainUserId,
-          userBody.fabricOrganization
-        );
+        
+        const enrollmentResult = await enrollUserInBlockchain(user.id);
 
         if (enrollmentResult.success) {
-          await User.findByIdAndUpdate(user.id, {
-            isBlockchainEnrolled: true,
-            blockchainEnrollmentDate: new Date()
-          });
           console.log(`✅ User ${user.email} successfully enrolled in blockchain`);
-
-          // Create participant in blockchain
-          await createBlockchainParticipant(user);
         } else {
           console.log(`⚠️ Blockchain enrollment failed for ${user.email}: ${enrollmentResult.message}`);
         }
@@ -104,9 +97,13 @@ const createUser = async (userBody) => {
  * Create participant record in blockchain
  */
 const createBlockchainParticipant = async (user) => {
+  let gateway = null;
+  
   try {
-    const { getContract } = require('../../fabric/fabricClient ');
-    const { contract, gateway } = await getContract('admin');
+    console.log(`🔗 Creating blockchain participant for user: ${user.email}`);
+    
+    const { contract, gateway: gw } = await getContract('admin');
+    gateway = gw;
 
     const participantData = {
       type: user.participantType,
@@ -120,8 +117,8 @@ const createBlockchainParticipant = async (user) => {
       operationalCapacity: user.operationalCapacity || {}
     };
 
+    console.log(`Creating participant with data:`, participantData);
     await contract.submitTransaction('CreateParticipant', JSON.stringify(participantData));
-    await gateway.disconnect();
 
     console.log(`✅ Blockchain participant created for ${user.email}`);
 
@@ -132,14 +129,18 @@ const createBlockchainParticipant = async (user) => {
       'metrics.complianceRate': 100
     });
 
+    return { success: true, message: 'Participant created successfully' };
+
   } catch (error) {
-    console.error(`❌ Failed to create blockchain participant:`, error.message);
+    console.error(`❌ Failed to create blockchain participant for ${user.email}:`, error.message);
     throw error;
+  } finally {
+    await safeDisconnect(gateway);
   }
 };
 
 /**
- * Manual blockchain enrollment
+ * Manual blockchain enrollment with improved error handling
  */
 const enrollUserInBlockchain = async (userId) => {
   const user = await getUserById(userId);
@@ -155,20 +156,61 @@ const enrollUserInBlockchain = async (userId) => {
     };
   }
 
-  const enrollmentResult = await blockchainService.enrollUser(
-    user.blockchainUserId,
-    user.fabricOrganization
-  );
+  try {
+    console.log(`🔗 Enrolling user ${user.blockchainUserId} with role ${user.participantType}...`);
+    
+    // Check if user already exists in blockchain wallet
+    const exists = await userExists(user.blockchainUserId);
+    if (exists) {
+      console.log(`User ${user.blockchainUserId} already exists in blockchain wallet`);
+    } else {
+      // Register and enroll user with blockchain
+      const enrollmentResult = await registerAndEnrollUser(
+        user.blockchainUserId, 
+        user.participantType
+      );
 
-  if (enrollmentResult.success) {
+      if (!enrollmentResult.success) {
+        throw new Error(enrollmentResult.message || 'Enrollment failed');
+      }
+      
+      console.log(`✅ User ${user.blockchainUserId} enrolled successfully in blockchain`);
+    }
+
+    // Update user status in MongoDB
     await updateUserById(userId, {
       isBlockchainEnrolled: true,
       blockchainEnrollmentDate: new Date()
     });
-    await createBlockchainParticipant(user);
-  }
 
-  return enrollmentResult;
+    // Create participant in blockchain
+    await createBlockchainParticipant(user);
+
+    return {
+      success: true,
+      message: 'User enrolled successfully in blockchain',
+      blockchainUserId: user.blockchainUserId
+    };
+
+  } catch (error) {
+    console.error(`❌ Blockchain enrollment failed for user ${user.email}:`, error.message);
+    
+    // Provide specific error messages based on error type
+    let errorMessage = 'Blockchain enrollment failed';
+    if (error.message.includes('Authentication failure')) {
+      errorMessage = 'Blockchain authentication failed. Please ensure admin is enrolled.';
+    } else if (error.message.includes('already enrolled')) {
+      errorMessage = 'User already enrolled in blockchain';
+    } else if (error.message.includes('fabric-ca request register failed')) {
+      errorMessage = 'Certificate Authority registration failed';
+    }
+
+    return {
+      success: false,
+      message: errorMessage,
+      error: error.message
+    };
+  }
 };
 
 /**
@@ -181,11 +223,12 @@ const getUserWithBlockchain = async (userId) => {
   }
 
   let blockchainProfile = null;
+  let gateway = null;
 
   if (user.isBlockchainEnrolled) {
     try {
-      const { getContract } = require('../../fabric/fabricClient ');
-      const { contract, gateway } = await getContract('admin');
+      const { contract, gateway: gw } = await getContract('admin');
+      gateway = gw;
 
       const result = await contract.evaluateTransaction(
         'ReadParticipant',
@@ -194,10 +237,12 @@ const getUserWithBlockchain = async (userId) => {
       );
 
       blockchainProfile = JSON.parse(result.toString());
-      await gateway.disconnect();
 
     } catch (error) {
-      console.error('Failed to fetch blockchain profile:', error.message);
+      console.error(`Failed to fetch blockchain profile for ${user.email}:`, error.message);
+      blockchainProfile = { error: 'Failed to load blockchain profile' };
+    } finally {
+      await safeDisconnect(gateway);
     }
   }
 
@@ -233,9 +278,10 @@ const updateUserById = async (userId, updateBody) => {
   // Update blockchain participant if enrolled and relevant fields changed
   if (user.isBlockchainEnrolled && (updateBody.name || updateBody.location || updateBody.contact)) {
     setImmediate(async () => {
+      let gateway = null;
       try {
-        const { getContract } = require('../../fabric/fabricClient ');
-        const { contract, gateway } = await getContract('admin');
+        const { contract, gateway: gw } = await getContract('admin');
+        gateway = gw;
 
         const updateData = {
           name: user.name,
@@ -253,10 +299,11 @@ const updateUserById = async (userId, updateBody) => {
           JSON.stringify(updateData)
         );
 
-        await gateway.disconnect();
         console.log(`✅ Blockchain participant updated for user ${user.email}`);
       } catch (error) {
-        console.error(`❌ Failed to update blockchain participant:`, error.message);
+        console.error(`❌ Failed to update blockchain participant for ${user.email}:`, error.message);
+      } finally {
+        await safeDisconnect(gateway);
       }
     });
   }
@@ -268,25 +315,72 @@ const updateUserById = async (userId, updateBody) => {
  * Query blockchain participants
  */
 const queryBlockchainParticipants = async (participantType) => {
+  let gateway = null;
+  
   try {
-    const { getContract } = require('../../fabric/fabricClient ');
-    const { contract, gateway } = await getContract('admin');
+    const { contract, gateway: gw } = await getContract('admin');
+    gateway = gw;
 
     const result = await contract.evaluateTransaction('QueryParticipants', participantType);
     const participants = JSON.parse(result.toString());
 
-    await gateway.disconnect();
     return participants;
   } catch (error) {
+    console.error(`Failed to query blockchain participants:`, error.message);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to query blockchain participants: ${error.message}`);
+  } finally {
+    await safeDisconnect(gateway);
   }
 };
 
-// Helper function
+/**
+ * Bulk enrollment for existing users
+ */
+const bulkEnrollUsersInBlockchain = async () => {
+  try {
+    const unenrolledUsers = await User.find({ 
+      participantType: { $ne: 'user' },
+      isBlockchainEnrolled: false
+    });
+
+    console.log(`🔗 Found ${unenrolledUsers.length} users to enroll in blockchain`);
+
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: []
+    };
+
+    for (const user of unenrolledUsers) {
+      try {
+        const result = await enrollUserInBlockchain(user.id);
+        if (result.success) {
+          results.success++;
+          console.log(`✅ Enrolled ${user.email}`);
+        } else {
+          results.failed++;
+          results.errors.push(`${user.email}: ${result.message}`);
+          console.log(`❌ Failed to enroll ${user.email}: ${result.message}`);
+        }
+      } catch (error) {
+        results.failed++;
+        results.errors.push(`${user.email}: ${error.message}`);
+        console.error(`❌ Error enrolling ${user.email}:`, error.message);
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error('❌ Bulk enrollment failed:', error.message);
+    throw error;
+  }
+};
+
+// Helper function - Updated MSP mapping
 const getMSPId = (fabricOrganization) => {
   const mspMap = {
     'FarmerOrg': 'Org1MSP',
-    'ProcessorOrg': 'Org1MSP',
+    'ProcessorOrg': 'Org1MSP', 
     'CollectorOrg': 'Org1MSP',
     'LabOrg': 'Org2MSP',
     'ManufacturerOrg': 'Org2MSP'
@@ -328,4 +422,5 @@ module.exports = {
   getUserWithBlockchain,
   createBlockchainParticipant,
   queryBlockchainParticipants,
+  bulkEnrollUsersInBlockchain,
 };

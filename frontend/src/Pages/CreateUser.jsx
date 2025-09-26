@@ -27,12 +27,13 @@ export default function CreateUser() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Form state
+  // Form state - FIXED: Added password field
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    password: "", // Added this field
     contact: "",
-    participantType: "farmer",
+    role: "farmer",
     fabricOrganization: "FarmerOrg",
     location: {
       address: "",
@@ -102,7 +103,7 @@ export default function CreateUser() {
       setFormData((prev) => ({ ...prev, [name]: value }));
 
       // Auto-update organization when participant type changes
-      if (name === "participantType") {
+      if (name === "role") {
         const selectedType = participantTypes.find(
           (type) => type.value === value
         );
@@ -183,26 +184,37 @@ export default function CreateUser() {
     }));
   };
 
-  // Validation function
+  // FIXED: Validation function with proper null checks
   const validateForm = () => {
     const newErrors = {};
 
-    // Required fields validation
-    if (!formData.name.trim()) newErrors.name = "Name is required";
-    if (!formData.email.trim()) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(formData.email))
+    // Required fields validation with null/undefined checks
+    if (!formData.name || !formData.name.trim()) {
+      newErrors.name = "Name is required";
+    }
+    
+    if (!formData.email || !formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid";
+    }
 
-    if (!formData.password.trim()) newErrors.password = "Password is required";
-    else if (formData.password.length < 8)
-      newErrors.password = "Password must be at least 8 characters";
-    else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(formData.password))
-      newErrors.password =
-        "Password must contain at least one letter and one number";
+    // Password validation - make it optional since backend generates password
+    if (formData.password && formData.password.trim()) {
+      if (formData.password.length < 8) {
+        newErrors.password = "Password must be at least 8 characters";
+      } else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(formData.password)) {
+        newErrors.password = "Password must contain at least one letter and one number";
+      }
+    }
 
-    if (!formData.contact.trim()) newErrors.contact = "Contact is required";
-    if (!formData.location.address.trim())
+    if (!formData.contact || !formData.contact.trim()) {
+      newErrors.contact = "Contact is required";
+    }
+    
+    if (!formData.location.address || !formData.location.address.trim()) {
       newErrors["location.address"] = "Address is required";
+    }
 
     if (!formData.location.latitude || isNaN(formData.location.latitude)) {
       newErrors["location.latitude"] = "Valid latitude is required";
@@ -219,8 +231,7 @@ export default function CreateUser() {
       formData.location.longitude < -180 ||
       formData.location.longitude > 180
     ) {
-      newErrors["location.longitude"] =
-        "Longitude must be between -180 and 180";
+      newErrors["location.longitude"] = "Longitude must be between -180 and 180";
     }
 
     setErrors(newErrors);
@@ -238,7 +249,7 @@ export default function CreateUser() {
     setLoading(true);
 
     try {
-      // Prepare data for API
+      // Prepare data for API - Remove password if empty (let backend generate it)
       const userData = {
         ...formData,
         location: {
@@ -247,6 +258,11 @@ export default function CreateUser() {
           longitude: parseFloat(formData.location.longitude),
         },
       };
+
+      // Remove password if it's empty (backend will generate one)
+      if (!userData.password || !userData.password.trim()) {
+        delete userData.password;
+      }
 
       // Make API call to create user
       const response = await axios.post(
@@ -279,7 +295,7 @@ export default function CreateUser() {
 
   // Render type-specific fields
   const renderTypeSpecificFields = () => {
-    switch (formData.participantType) {
+    switch (formData.role) {
       case "processor":
       case "manufacturer":
         return (
@@ -498,24 +514,43 @@ export default function CreateUser() {
                   Basic Information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {["name", "email", "contact"].map((field) => (
+                  {/* FIXED: Added password field */}
+                  {["name", "email", "password", "contact"].map((field) => (
                     <div key={field}>
                       <label className="block text-sm font-medium text-green-700 mb-2 capitalize">
                         {field.replace(/([A-Z])/g, " $1")}{" "}
-                        <span className="text-red-500">*</span>
+                        {field !== "password" && <span className="text-red-500">*</span>}
+                        {field === "password" && <span className="text-gray-400 text-xs">(Optional - auto-generated if empty)</span>}
                       </label>
-                      <input
-                        type={field === "email" ? "email" : "text"}
-                        name={field}
-                        value={formData[field]}
-                        onChange={handleInputChange}
-                        placeholder={`Enter ${field
-                          .replace(/([A-Z])/g, " $1")
-                          .toLowerCase()}`}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors ${
-                          errors[field] ? "border-red-300" : "border-green-200"
-                        }`}
-                      />
+                      <div className="relative">
+                        <input
+                          type={
+                            field === "email" 
+                              ? "email" 
+                              : field === "password" 
+                                ? (showPassword ? "text" : "password")
+                                : "text"
+                          }
+                          name={field}
+                          value={formData[field]}
+                          onChange={handleInputChange}
+                          placeholder={`Enter ${field
+                            .replace(/([A-Z])/g, " $1")
+                            .toLowerCase()}`}
+                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors ${
+                            errors[field] ? "border-red-300" : "border-green-200"
+                          }`}
+                        />
+                        {field === "password" && (
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        )}
+                      </div>
                       {errors[field] && (
                         <p className="text-red-500 text-sm mt-1">
                           {errors[field]}
@@ -526,6 +561,7 @@ export default function CreateUser() {
                 </div>
               </div>
 
+              {/* Rest of the form remains the same... */}
               {/* Blockchain Information */}
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-green-800 flex items-center gap-2 border-l-4 border-green-400 pl-2">
@@ -538,8 +574,8 @@ export default function CreateUser() {
                       Participant Type <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="participantType"
-                      value={formData.participantType}
+                      name="role"
+                      value={formData.role}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
                     >

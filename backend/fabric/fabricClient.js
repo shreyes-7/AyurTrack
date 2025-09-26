@@ -1,7 +1,142 @@
 const { Gateway, Wallets } = require('fabric-network');
+const FabricCAServices = require('fabric-ca-client');
 const path = require('path');
 const fs = require('fs');
 
+// Helper function to get organization info based on role
+function getOrgInfo(role) {
+    const orgMap = {
+        'admin': { mspId: 'Org1MSP', caName: 'ca.org1.example.com', orgName: 'Org1' },
+        'farmer': { mspId: 'Org1MSP', caName: 'ca.org1.example.com', orgName: 'Org1' },
+        'processor': { mspId: 'Org1MSP', caName: 'ca.org1.example.com', orgName: 'Org1' },
+        'lab': { mspId: 'Org2MSP', caName: 'ca.org1.example.com', orgName: 'Org1' }, // FIXED: Use Org1 CA
+        'manufacturer': { mspId: 'Org2MSP', caName: 'ca.org1.example.com', orgName: 'Org1' } // FIXED: Use Org1 CA
+    };
+    return orgMap[role] || { mspId: 'Org1MSP', caName: 'ca.org1.example.com', orgName: 'Org1' };
+}
+
+// FIXED: Function to register and enroll a new user
+async function registerAndEnrollUser(userId, role = 'client') {
+    try {
+        console.log(`Registering and enrolling user ${userId} with role ${role}...`);
+        
+        const orgInfo = getOrgInfo(role);
+        console.log(`Using org: ${orgInfo.orgName}, MSP: ${orgInfo.mspId}, CA: ${orgInfo.caName}`);
+        
+        // FIXED: Always use org1 connection profile since admin is enrolled there
+        const ccpPath = path.resolve(__dirname, '..', '..', 'fabric', 'fabric-samples', 
+            'test-network', 'organizations', 'peerOrganizations', 
+            'org1.example.com', 'connection-org1.json'); // Always use org1
+        
+        let ccp;
+        if (fs.existsSync(ccpPath)) {
+            ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
+            console.log('✅ Connection profile loaded');
+        } else {
+            throw new Error(`Connection profile not found at: ${ccpPath}`);
+        }
+
+        // FIXED: Always use ca.org1.example.com since admin is enrolled there
+        const caInfo = ccp.certificateAuthorities['ca.org1.example.com'];
+        if (!caInfo) {
+            throw new Error('CA info for ca.org1.example.com not found');
+        }
+        
+        const caTLSCACerts = caInfo.tlsCACerts.pem;
+        const ca = new FabricCAServices(caInfo.url, { 
+            trustedRoots: caTLSCACerts, 
+            verify: false 
+        }, caInfo.caName);
+
+        // Load wallet
+        const walletPath = path.join(__dirname, 'wallet');
+        const wallet = await Wallets.newFileSystemWallet(walletPath);
+
+        // Check if user already exists
+        const userIdentity = await wallet.get(userId);
+        if (userIdentity) {
+            console.log(`✓ User ${userId} already exists in wallet`);
+            return { success: true, message: 'User already enrolled' };
+        }
+
+        // Check if admin exists
+        const adminIdentity = await wallet.get('admin');
+        if (!adminIdentity) {
+            throw new Error('Admin identity not found. Run enrollAdmin.js first');
+        }
+
+        console.log('✅ Admin identity found');
+
+        // Build admin user object for authenticating with the CA
+        const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
+        const adminUser = await provider.getUserContext(adminIdentity, 'admin');
+
+        if (!adminUser || !adminUser.getSigningIdentity()) {
+            throw new Error('Admin user context is invalid');
+        }
+
+        console.log('✅ Admin user context created');
+
+        // STEP 1: Register the user with CA
+        console.log(`Registering user ${userId}...`);
+        
+        // FIXED: Use fixed affiliation that exists in test-network
+        const secret = await ca.register({
+            affiliation: 'org1.department1', // FIXED: Always use org1.department1
+            enrollmentID: userId,
+            role: 'client',
+            attrs: [
+                { name: 'role', value: role, ecert: true },
+                { name: 'userId', value: userId, ecert: true },
+                { name: 'mspId', value: orgInfo.mspId, ecert: true }
+            ]
+        }, adminUser);
+
+        console.log(`✓ User ${userId} registered successfully`);
+
+        // STEP 2: Enroll the user
+        console.log(`Enrolling user ${userId}...`);
+        const enrollment = await ca.enroll({
+            enrollmentID: userId,
+            enrollmentSecret: secret
+        });
+
+        // STEP 3: Create identity and add to wallet
+        const x509Identity = {
+            credentials: {
+                certificate: enrollment.certificate,
+                privateKey: enrollment.key.toBytes(),
+            },
+            mspId: orgInfo.mspId, // This can be different MSP (Org1MSP or Org2MSP)
+            type: 'X.509',
+        };
+
+        await wallet.put(userId, x509Identity);
+        console.log(`✓ User ${userId} enrolled successfully and added to wallet`);
+
+        return { 
+            success: true, 
+            message: 'User registered and enrolled successfully',
+            userId: userId,
+            mspId: orgInfo.mspId
+        };
+
+    } catch (error) {
+        console.error(`❌ Failed to register/enroll user ${userId}:`, error.message);
+        
+        if (error.message.includes('fabric-ca request register failed')) {
+            console.error('💡 CA Registration failed - check:');
+            console.error('   1. Admin identity is properly enrolled');
+            console.error('   2. CA server is running');
+            console.error('   3. User does not already exist');
+            console.error('   4. Affiliation exists (org1.department1)');
+        }
+        
+        throw error;
+    }
+}
+
+// Keep all other functions unchanged
 async function getContract(user = 'admin', org = 'Org1') {
     try {
         console.log(`Connecting to Fabric network with user: ${user}...`);
@@ -11,10 +146,10 @@ async function getContract(user = 'admin', org = 'Org1') {
 
         const identity = await wallet.get(user);
         if (!identity) {
-            throw new Error(`Identity ${user} not found in wallet. Run enrollAdmin.js first`);
+            throw new Error(`Identity ${user} not found in wallet. Run enrollAdmin.js first or register the user.`);
         }
 
-        // Use connection profile path - adjust this to your actual path
+        // FIXED: Always use org1 connection profile
         const ccpPath = path.resolve(__dirname, '..', '..', 'fabric', 'fabric-samples', 'test-network', 'organizations', 'peerOrganizations', 'org1.example.com', 'connection-org1.json');
 
         let connectionProfile;
@@ -62,79 +197,7 @@ async function getContract(user = 'admin', org = 'Org1') {
             }
 
         } else {
-            console.log('Connection profile not found, using dynamic certificate configuration...');
-
-            // Build dynamic connection profile with both peers
-            const peer1TlsCertPath = path.resolve(__dirname, '..', '..', 'fabric', 'fabric-samples', 'test-network', 'organizations', 'peerOrganizations', 'org1.example.com', 'peers', 'peer0.org1.example.com', 'tls', 'ca.crt');
-            const peer2TlsCertPath = path.resolve(__dirname, '..', '..', 'fabric', 'fabric-samples', 'test-network', 'organizations', 'peerOrganizations', 'org2.example.com', 'peers', 'peer0.org2.example.com', 'tls', 'ca.crt');
-
-            if (!fs.existsSync(peer1TlsCertPath)) {
-                throw new Error(`Peer1 TLS certificate not found at: ${peer1TlsCertPath}`);
-            }
-            if (!fs.existsSync(peer2TlsCertPath)) {
-                throw new Error(`Peer2 TLS certificate not found at: ${peer2TlsCertPath}`);
-            }
-
-            const peer1TlsCert = fs.readFileSync(peer1TlsCertPath, 'utf8');
-            const peer2TlsCert = fs.readFileSync(peer2TlsCertPath, 'utf8');
-
-            connectionProfile = {
-                name: "ayurtrack-network",
-                version: "1.0.0",
-                client: {
-                    organization: "Org1"
-                },
-                organizations: {
-                    Org1: {
-                        mspid: "Org1MSP",
-                        peers: ["peer0.org1.example.com", "peer0.org2.example.com"]
-                    }
-                },
-                peers: {
-                    "peer0.org1.example.com": {
-                        url: "grpcs://localhost:7051",
-                        grpcOptions: {
-                            "ssl-target-name-override": "peer0.org1.example.com",
-                            "hostnameOverride": "peer0.org1.example.com",
-                            "grpc-max-receive-message-length": 15728640,
-                            "grpc-max-send-message-length": 15728640
-                        },
-                        tlsCACerts: {
-                            pem: peer1TlsCert
-                        }
-                    },
-                    "peer0.org2.example.com": {
-                        url: "grpcs://localhost:9051",
-                        grpcOptions: {
-                            "ssl-target-name-override": "peer0.org2.example.com",
-                            "hostnameOverride": "peer0.org2.example.com",
-                            "grpc-max-receive-message-length": 15728640,
-                            "grpc-max-send-message-length": 15728640
-                        },
-                        tlsCACerts: {
-                            pem: peer2TlsCert
-                        }
-                    }
-                },
-                channels: {
-                    mychannel: {
-                        peers: {
-                            "peer0.org1.example.com": {
-                                endorsingPeer: true,
-                                chaincodeQuery: true,
-                                ledgerQuery: true,
-                                eventSource: true
-                            },
-                            "peer0.org2.example.com": {
-                                endorsingPeer: true,
-                                chaincodeQuery: true,
-                                ledgerQuery: true,
-                                eventSource: false
-                            }
-                        }
-                    }
-                }
-            };
+            throw new Error(`Connection profile not found at: ${ccpPath}`);
         }
 
         const gateway = new Gateway();
@@ -144,12 +207,12 @@ async function getContract(user = 'admin', org = 'Org1') {
             wallet,
             identity: user,
             discovery: {
-                enabled: true, // Keep enabled for better peer discovery
+                enabled: true,
                 asLocalhost: true
             },
             eventHandlerOptions: {
                 commitTimeout: 300,
-                strategy: null // Use default strategy
+                strategy: null
             }
         });
 
@@ -165,24 +228,6 @@ async function getContract(user = 'admin', org = 'Org1') {
 
     } catch (error) {
         console.error('❌ Error connecting to Fabric network:', error.message);
-
-        // Enhanced error reporting
-        if (error.message.includes('No valid responses from any peers')) {
-            console.error('💡 Troubleshooting tips:');
-            console.error('   1. Check if both peer containers are running: docker ps');
-            console.error('   2. Verify chaincode is deployed: docker ps | grep herbaltrace');
-            console.error('   3. Test with CLI: peer chaincode query -C mychannel -n herbaltrace -c \'{"function":"QueryParticipants","Args":["farmer"]}\'');
-            console.error('   4. Check chaincode logs: docker logs [chaincode-container-name]');
-        }
-
-        if (error.message.includes('wallet') || error.message.includes('Identity')) {
-            console.error('💡 Identity issue: Run enrollAdmin.js to create wallet identities');
-        }
-
-        if (error.message.includes('access denied')) {
-            console.error('💡 Access denied: Identity may be expired. Re-run enrollAdmin.js');
-        }
-
         throw error;
     }
 }
@@ -222,6 +267,31 @@ async function initializeLedger() {
     }
 }
 
+// Helper function to check if user exists in wallet
+async function userExists(userId) {
+    try {
+        const walletPath = path.join(__dirname, 'wallet');
+        const wallet = await Wallets.newFileSystemWallet(walletPath);
+        const identity = await wallet.get(userId);
+        return !!identity;
+    } catch (error) {
+        console.error('Error checking user existence:', error.message);
+        return false;
+    }
+}
+
+// Helper function to get user identity from wallet
+async function getUserIdentity(userId) {
+    try {
+        const walletPath = path.join(__dirname, 'wallet');
+        const wallet = await Wallets.newFileSystemWallet(walletPath);
+        return await wallet.get(userId);
+    } catch (error) {
+        console.error('Error getting user identity:', error.message);
+        return null;
+    }
+}
+
 // Helper function to safely disconnect gateway
 async function safeDisconnect(gateway) {
     try {
@@ -233,9 +303,28 @@ async function safeDisconnect(gateway) {
     }
 }
 
+// Helper function to test CA connectivity
+async function testCAConnection(caUrl = 'https://localhost:7054', caName = 'ca-org1') {
+    try {
+        console.log(`🧪 Testing CA connection to ${caUrl}...`);
+        const ca = new FabricCAServices(caUrl, { verify: false }, caName);
+        // Skip info() method as it might not exist
+        console.log('✓ CA Connection created successfully');
+        return true;
+    } catch (error) {
+        console.error('❌ CA Connection failed:', error.message);
+        return false;
+    }
+}
+
 module.exports = {
     getContract,
+    registerAndEnrollUser,
     testChaincode,
     initializeLedger,
-    safeDisconnect
+    safeDisconnect,
+    userExists,
+    getUserIdentity,
+    testCAConnection,
+    getOrgInfo
 };

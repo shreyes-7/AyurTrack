@@ -59,8 +59,11 @@ const EXCIPIENTS_BY_TYPE = {
   ],
 };
 
-export default async function ManufacturerBatchPage() {
-  const headers = await getAuthHeaders();
+
+export default  function ManufacturerBatchPage() {
+  useEffect(() => { 
+    const headers= getAuthHeaders();  
+  }, []);
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [timestampStatus, setTimestampStatus] = useState("idle");
@@ -219,27 +222,30 @@ const handleSubmitFormulation = async (e) => {
   setSubmitStatus(null);
 
   try {
+    // Get auth headers first
+    const headers = await getAuthHeaders();
+
     // Build formulation parameters properly
     const formulationParams = {
       producttype: formData.productType,
       dosage: formData.dosage,
-      batchsize: parseInt(formData.batchSize), // Fixed: convert to integer
+      batchsize: parseInt(formData.batchSize), // Fixed: removed 'units' suffix
     };
 
     // Add excipients if provided
-    if (formData.excipients && formData.excipients.trim()) {
+    if (formData.excipients) {
       formulationParams.excipients = formData.excipients
         .split(',')
         .map(e => e.trim())
         .filter(e => e);
     }
 
-    // Add formula ratio if provided (fix JSON parsing)
-    if (formData.formulaRatio && formData.formulaRatio.trim()) {
+    // Add formula ratio if provided
+    if (formData.formulaRatio) {
       try {
         formulationParams.formularatio = JSON.parse(formData.formulaRatio);
       } catch (e) {
-        alert('Invalid formula ratio format. Please use valid JSON format like {"Ashwagandha": 40, "Tulsi": 30}');
+        alert('Invalid formula ratio format. Please use JSON format like {"Ashwagandha": 40, "Tulsi": 30}');
         return;
       }
     }
@@ -279,9 +285,9 @@ const handleSubmitFormulation = async (e) => {
 
     console.log('Submitting formulation data:', submissionData);
 
-    // Step 1: Create formulation on blockchain
+    // Step 1: Create formulation
     const response = await axios.post(`${BASE_URL}/formulations`, submissionData, {
-      headers: headers
+      headers,
     });
 
     console.log('Formulation stored successfully:', response.data);
@@ -294,10 +300,22 @@ const handleSubmitFormulation = async (e) => {
     console.error('Error submitting formulation:', error);
     
     // Better error handling
-    const errorMessage = error.response?.data?.message || 
-                        error.response?.data?.error || 
-                        error.message || 
-                        'Failed to submit formulation. Please try again.';
+    let errorMessage = 'Failed to submit formulation. Please try again.';
+    
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    // Log the full error for debugging
+    console.error('Full error details:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
     
     setSubmitStatus({ type: 'error', message: errorMessage });
   } finally {
@@ -306,32 +324,46 @@ const handleSubmitFormulation = async (e) => {
 };
 
 
+
+
   const generateQRCode = async (productBatchId) => {
   try {
-    // Fixed: Use GET request to /:productBatchId/generate-qr
-    const response = await axios.get(`${BASE_URL}/batches/${productBatchId}/generate-qr`,{ headers: headers });
+    const headers = await getAuthHeaders();
+    
+    // Fixed: Use GET request instead of POST, and correct URL format
+    const response = await axios.get(`${BASE_URL}/${productBatchId}/generate-qr`, {
+      headers
+    });
     
     if (response.data) {
-      const qrToken = response.data; // Backend should return just the token string
+      const qrToken = typeof response.data === 'string' ? response.data : response.data.qrToken;
+      
       setFormData(prev => ({ 
         ...prev, 
         qrToken: qrToken,
         consumerUrl: `${BASE_URL}/consumer/product/${productBatchId}`
       }));
       setQrGenerated(true);
-      setSubmitStatus({ type: 'success', message: 'QR Code generated successfully!' });
-      console.log('QR generated:', qrToken);
+      setSubmitStatus({ type: 'success', message: 'QR Code generated and stored successfully!' });
+      console.log('QR generated & stored:', qrToken);
     } else {
       throw new Error('No QR token received from server');
     }
   } catch (error) {
     console.error('Error generating QR:', error);
-    const errorMessage = error.response?.data?.message || 
-                        error.response?.data?.error || 
-                        'Failed to generate QR code. Please try again.';
+    
+    let errorMessage = 'Failed to generate QR. Please try again.';
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    }
+    
     setSubmitStatus({ type: 'error', message: errorMessage });
   }
 };
+
+
 
 
   const getSelectedProductType = () =>

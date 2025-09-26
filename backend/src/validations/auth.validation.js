@@ -4,12 +4,12 @@ const { password } = require('./custom.validation');
 const register = {
   body: Joi.object().keys({
     email: Joi.string().required().email(),
+    password: Joi.string().custom(password),
     name: Joi.string().required(),
     role: Joi.string().required().valid('user', 'admin', 'farmer', 'processor', 'lab', 'manufacturer'),
 
     // Enhanced blockchain fields
     fabricOrganization: Joi.string().required().valid('FarmerOrg', 'ProcessorOrg', 'CollectorOrg', 'LabOrg', 'ManufacturerOrg','AdminOrg'),
-    participantType: Joi.string().required().valid('farmer', 'processor', 'lab', 'manufacturer','admin'),
 
     // Required location for blockchain geofencing
     location: Joi.object({

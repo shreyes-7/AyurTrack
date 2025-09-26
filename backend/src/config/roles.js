@@ -4,7 +4,7 @@ const allRoles = {
   farmer: ['getUsers', 'createBatches', 'viewOwnProfile', 'updateOwnProfile'],
   processor: ['getUsers', 'processBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain'],
   lab: ['getUsers', 'testBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain', 'createTestReports'],
-  manufacturer: ['getUsers', 'manufactureBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain', 'createProducts'],
+  manufacturer: ['getUsers', 'manufactureBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain', 'createProducts','createFormulation'],
 };
 
 const roles = Object.keys(allRoles);
