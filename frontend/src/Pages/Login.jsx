@@ -105,14 +105,14 @@ const Login = () => {
   // Redirect user to appropriate dashboard based on their role
   const getDashboardRoute = (role) => {
     const dashboards = {
-      farmer: '/dashboard',
-      manufacturer: '/dashboard',
-      processor: '/dashboard',
+      farmer: '/collection',
+      manufacturer: '/batch',
+      processor: '/processing',
       admin: '/admin-dashboard',
-      quality_controller: '/dashboard',
-      distributor: '/dashboard',
-      retailer: '/dashboard',
-      consumer: '/consumer'
+      lab: '/quality',
+      distributor: '/home',
+      retailer: '/home',
+      consumer: '/home'
     };
     return dashboards[role] || '/dashboard';
   };
