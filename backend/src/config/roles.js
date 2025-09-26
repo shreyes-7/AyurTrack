@@ -1,7 +1,7 @@
 const allRoles = {
   user: [],
   admin: ['getUsers', 'manageUsers', 'manageBlockchain'],
-  farmer: ['getUsers', 'createBatches', 'viewOwnProfile', 'updateOwnProfile'],
+  farmer: ['getUsers', 'createBatches', 'viewOwnProfile', 'updateOwnProfile','createCollection'],
   processor: ['getUsers', 'processBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain'],
   lab: ['getUsers', 'testBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain', 'createTestReports'],
   manufacturer: ['getUsers', 'manufactureBatches', 'viewOwnProfile', 'updateOwnProfile', 'querySupplyChain', 'createProducts','createFormulation'],

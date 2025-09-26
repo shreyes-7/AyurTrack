@@ -7,18 +7,20 @@ import Layout from "../Components/Layout";
 import axios from "axios";
 import { BASE_URL } from "../../api";
 import { useAuth } from "../App";
-import { getAuthHeaders } from "../utils/tokenUtils";
+import { getAuthHeaders } from "../utils/tokenUtils"; // ✅ Same import as AdminDashboard
 
-export default async function FarmerCollectionPage() {
+export default function FarmerCollectionPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [locationStatus, setLocationStatus] = useState('idle'); // idle, loading, success, error
+  const [locationStatus, setLocationStatus] = useState('idle');
   const [timestampStatus, setTimestampStatus] = useState('idle');
-  const headers= await getAuthHeaders()
-  // Get farmer info from session/context (this should come from authentication)
-  const [farmerInfo, setFarmerInfo] = useState(null);
   
-  // Default quality parameters - these will be used automatically (hidden from UI)
+  // Get farmer info from session/context
+  const [farmerInfo, setFarmerInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Default quality parameters
   const defaultQualityParams = {
     moistureLevel: "8.5",
     pesticidePPM: "1.2",
@@ -30,12 +32,12 @@ export default async function FarmerCollectionPage() {
     species: "",
     quantity: "",
     
-    // Auto-applied quality parameters (no user input needed, hidden from UI)
+    // Auto-applied quality parameters
     moistureLevel: defaultQualityParams.moistureLevel,
     pesticidePPM: defaultQualityParams.pesticidePPM,
     qualityNotes: defaultQualityParams.qualityNotes,
     
-    // Auto-generated fields (backend will generate these)
+    // Auto-generated fields
     batchId: "",
     collectionId: "",
     collectorId: "",
@@ -48,7 +50,7 @@ export default async function FarmerCollectionPage() {
     unit: "kg"
   });
 
-  const { submit, submitting, error, success } = useSubmit(
+  const { submit, submitting, error: submitError, success } = useSubmit(
     apiEndpoints.createCollectorEvent,
     {
       onSuccess: (result) => {
@@ -58,19 +60,25 @@ export default async function FarmerCollectionPage() {
     }
   );
 
-  // Simulate getting farmer info from authentication context
+  // ✅ FIXED: Load farmer info in useEffect (like AdminDashboard pattern)
   useEffect(() => {
-    // In real implementation, this would come from your auth context/JWT token
-    const mockFarmerInfo = {
-      id: "F266201K3X", // Example farmer ID following your pattern
-      name: "Ram Kumar Farmer",
-      blockchainUserId: "F266201K3X",
-      mspId: "Org1MSP"
+    // Simulate getting farmer info from authentication context
+    // In real implementation, get this from localStorage or auth context
+    const user = JSON.parse(localStorage.getItem('ayurtrack_user') || '{}');
+    
+    const farmerData = {
+      id: user.blockchainUserId || "F266201K3X",
+      name: user.name || "Ram Kumar Farmer",
+      blockchainUserId: user.blockchainUserId || "F266201K3X",
+      mspId: "Org1MSP",
+      role: user.role || "farmer"
     };
-    setFarmerInfo(mockFarmerInfo);
+    
+    console.log('Current farmer info:', farmerData);
+    setFarmerInfo(farmerData);
     setFormData(prev => ({
       ...prev,
-      collectorId: mockFarmerInfo.blockchainUserId
+      collectorId: farmerData.blockchainUserId
     }));
   }, []);
 
@@ -155,46 +163,79 @@ export default async function FarmerCollectionPage() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
+  // ✅ FIXED: Use getAuthHeaders exactly like AdminDashboard
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateStep(1) || !validateStep(2)) {
-      alert("Please fill in all required fields");
-      return;
-    }
+  e.preventDefault();
+  
+  // Validation checks...
+  if (!validateStep(1) || !validateStep(2)) {
+    alert("Please fill in all required fields");
+    return;
+  }
 
-    if (!farmerInfo?.blockchainUserId) {
-      alert("Farmer authentication required");
-      return;
-    }
+  if (!farmerInfo?.blockchainUserId) {
+    alert("Farmer authentication required");
+    return;
+  }
 
-    // Prepare data in the format expected by the chaincode
-    // Quality parameters are automatically included from default values
+  setLoading(true);
+  setError(null);
+
+  try {
+    const headers = await getAuthHeaders();
+
+    // ✅ FIXED: Correct field mapping
     const submissionData = {
-      collectorId: farmerInfo.blockchainUserId,
-      lat: parseFloat(formData.gpsLat),
-      long: parseFloat(formData.gpsLng),
-      timestamp: formData.timestamp,
       species: formData.species,
       quantity: parseFloat(formData.quantity),
+      latitude: parseFloat(formData.gpsLat),    // ✅ Fixed
+      longitude: parseFloat(formData.gpsLng),   // ✅ Fixed
       quality: {
         moisture: parseFloat(formData.moistureLevel),
         pesticidePPM: parseFloat(formData.pesticidePPM)
       },
-      qualityNotes: formData.qualityNotes,
-      unit: formData.unit
+      timestamp: formData.timestamp
     };
 
-    const response = await axios.post(`${BASE_URL}/collections/createCollection`, collectionData, {
-      headers: {headers
-      }
-    });
+    console.log("Submitting corrected data:", submissionData);
+
+    const response = await axios.post(`${BASE_URL}/collections`, submissionData, { headers });
     
-    console.log('Response:', response.data);
- 
-    console.log("Submitting collection data with default quality params:", submissionData);
-    await submit(submissionData);
-  };
+    console.log('✅ Success:', response.data);
+    
+    // Show success message or redirect
+    alert('Collection submitted successfully!');
+    navigate('/dashboard');
+    
+  } catch (err) {
+    console.error('❌ Error:', err.response?.data);
+    
+    const errorMessage = err.response?.data?.message || 'Failed to submit collection';
+    setError(errorMessage);
+    alert(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // ✅ Show loading state while farmer info is loading
+  if (!farmerInfo) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mb-4">
+                <span className="text-2xl">🌾</span>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">Loading...</h1>
+              <p className="text-gray-600">Initializing collection portal...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -217,12 +258,13 @@ export default async function FarmerCollectionPage() {
                 <div className="text-sm text-blue-800">
                   <strong>Logged in as:</strong> {farmerInfo.name} 
                   <span className="ml-2 font-mono text-xs">({farmerInfo.blockchainUserId})</span>
+                  <span className="ml-2 text-xs">Role: {farmerInfo.role}</span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Progress Indicator - Now only shows 2 steps */}
+          {/* Progress Indicator */}
           <div className="mb-8">
             <div className="flex items-center justify-center space-x-4">
               {[1, 2].map((step) => (
@@ -271,10 +313,10 @@ export default async function FarmerCollectionPage() {
             </div>
 
             {/* Error/Success Messages */}
-            {error && (
+            {(error || submitError) && (
               <div className="mx-6 mt-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
                 <span className="text-red-600 text-2xl mr-3">⚠️</span>
-                <div className="text-red-800">{error}</div>
+                <div className="text-red-800">{error || submitError}</div>
               </div>
             )}
 
@@ -294,10 +336,10 @@ export default async function FarmerCollectionPage() {
                     Basic Collection Information
                   </h2>
 
-                  {/* Species Input (Text Field) */}
+                  {/* Species Input */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Herb Species Name *
+                      Herb ID *
                     </label>
                     <input
                       type="text"
@@ -305,7 +347,7 @@ export default async function FarmerCollectionPage() {
                       value={formData.species}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder="Enter herb species name (e.g., Ashwagandha, Tulsi, Amla, Turmeric, Neem)"
+                      placeholder="Enter herb species name (e.g., Ashwagandha, Tulsi, Amla)"
                     />
                     <div className="mt-1 text-sm text-gray-500">
                       Enter the exact name of the herb species you are collecting
@@ -488,7 +530,7 @@ export default async function FarmerCollectionPage() {
                     </div>
                   </div>
 
-                  {/* Final Review - Quality parameters hidden but still in data */}
+                  {/* Final Review */}
                   <div className="bg-white border border-gray-200 rounded-lg p-6">
                     <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
                       <span className="mr-2">📋</span>
@@ -580,16 +622,16 @@ export default async function FarmerCollectionPage() {
                       
                       <button
                         type="submit"
-                        disabled={submitting || !validateStep(1) || !validateStep(2)}
+                        disabled={submitting || loading || !validateStep(1) || !validateStep(2)}
                         className={`
                           px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center
-                          ${submitting
+                          ${(submitting || loading)
                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                             : 'bg-gradient-to-r from-green-500 to-blue-500 text-white hover:from-green-600 hover:to-blue-600'
                           }
                         `}
                       >
-                        {submitting ? (
+                        {(submitting || loading) ? (
                           <>
                             <ButtonLoader />
                             Submitting to Blockchain...
