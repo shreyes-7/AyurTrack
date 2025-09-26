@@ -7,7 +7,7 @@ from langdetect import detect
 from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
 import requests
 
-app = Flask(__name__)
+app = Flask(_name_)
 
 # -------------------------------
 # Tesseract OCR
@@ -35,7 +35,7 @@ UNIT_MAP = {
 NUMBER_RE = r"(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)"
 UNIT_RE = r"(kg|kgs|kilogram|kilograms|g|gram|grams|gm|mg|milligram|milligrams|lb|lbs|pound|pounds|oz|ounce|ounces|quintal|quintals|ton|tonne|tons)\b"
 NUM_UNIT_PATTERN = re.compile(rf"{NUMBER_RE}\s*(?:-?\s*)?{UNIT_RE}", flags=re.I)
-QTY_NEAR_KEYWORD = re.compile(r"(?:quantity|qty|amount|we need|need)\s*[:\-]?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\s*(\w+)?", flags=re.I)
+QTY_NEAR_KEYWORD = re.compile(r"(?:quantity|qty|amount|we need|need)\s*[:\-]?\s*(\d{1,3}(?:,\d{3})(?:\.\d+)?|\d+(?:\.\d+)?)\s(\w+)?", flags=re.I)
 HERB_ID_PATTERN = re.compile(r"\bH([A-Z]+)(\d{2})(\d{2})\b", flags=re.I)
 
 # -------------------------------
@@ -204,5 +204,5 @@ def process_image():
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     app.run(port=5000, debug=True)

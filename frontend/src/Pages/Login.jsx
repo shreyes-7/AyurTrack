@@ -1,51 +1,60 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, Leaf, ArrowRight, Shield, Sparkles } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../App'; // Import from your main App file
-import { BASE_URL } from '../../api';
+import React, { useState } from "react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  Leaf,
+  ArrowRight,
+  Shield,
+  Sparkles,
+} from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../App"; // Import from your main App file
+import { BASE_URL } from "../../api";
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  
+
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [focusedField, setFocusedField] = useState('');
+  const [focusedField, setFocusedField] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: "",
       }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
-    
+
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = "Password must be at least 6 characters";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -53,50 +62,58 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
     setErrors({});
-    
+
     try {
-  // Use the BASE_URL constant with the correct endpoint
-  const response = await fetch(`${BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email: formData.email,
-      password: formData.password
-    }),
-  });
+      // Use the BASE_URL constant with the correct endpoint
+      const response = await fetch(`${BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
       const data = await response.json();
 
       if (response.ok) {
         // Use the login function from AuthContext to store user data and tokens
         login(data.user, data.tokens);
-        
+
         // Get the intended destination from location state or redirect based on role
-        const from = location.state?.from?.pathname || getDashboardRoute(data.user.role);
+        const from =
+          location.state?.from?.pathname || getDashboardRoute(data.user.role);
         navigate(from, { replace: true });
+        window.location.reload();
       } else {
         // Handle different types of errors from the API
         if (data.errors && Array.isArray(data.errors)) {
           // If API returns field-specific errors
           const fieldErrors = {};
-          data.errors.forEach(error => {
+          data.errors.forEach((error) => {
             if (error.field) {
               fieldErrors[error.field] = error.message;
             }
           });
-          setErrors(fieldErrors.email || fieldErrors.password ? fieldErrors : { general: data.message || 'Login failed' });
+          setErrors(
+            fieldErrors.email || fieldErrors.password
+              ? fieldErrors
+              : { general: data.message || "Login failed" }
+          );
         } else {
-          setErrors({ general: data.message || 'Invalid email or password' });
+          setErrors({ general: data.message || "Invalid email or password" });
         }
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setErrors({ general: 'Network error. Please check your connection and try again.' });
+      console.error("Login error:", error);
+      setErrors({
+        general: "Network error. Please check your connection and try again.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -105,16 +122,16 @@ const Login = () => {
   // Redirect user to appropriate dashboard based on their role
   const getDashboardRoute = (role) => {
     const dashboards = {
-      farmer: '/dashboard',
-      manufacturer: '/dashboard',
-      processor: '/dashboard',
-      admin: '/admin-dashboard',
-      quality_controller: '/dashboard',
-      distributor: '/dashboard',
-      retailer: '/dashboard',
-      consumer: '/consumer'
+      farmer: "/dashboard",
+      manufacturer: "/dashboard",
+      processor: "/dashboard",
+      admin: "/admin-dashboard",
+      quality_controller: "/dashboard",
+      distributor: "/dashboard",
+      retailer: "/dashboard",
+      consumer: "/consumer",
     };
-    return dashboards[role] || '/dashboard';
+    return dashboards[role] || "/dashboard";
   };
 
   const togglePasswordVisibility = () => {
@@ -156,7 +173,6 @@ const Login = () => {
 
       <div className="relative z-10 w-full max-w-5xl mx-4 flex items-center justify-center">
         <div className="grid lg:grid-cols-2 gap-8 w-full">
-          
           {/* Left Side - Branding & Info */}
           <div className="hidden lg:flex flex-col justify-center space-y-8 p-12">
             <div className="space-y-6">
@@ -166,22 +182,21 @@ const Login = () => {
                     <Leaf className="w-6 h-6 text-white" />
                   </div>
                 </div>
-                <h1 className="text-3xl font-bold text-slate-800">
-                  AyurTrack
-                </h1>
+                <h1 className="text-3xl font-bold text-slate-800">AyurTrack</h1>
               </div>
-              
+
               <div className="space-y-4">
                 <h2 className="text-4xl font-bold text-slate-900 leading-tight">
-                  Welcome back to the{' '}
+                  Welcome back to the{" "}
                   <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
                     future
-                  </span>{' '}
+                  </span>{" "}
                   of herbal tracking
                 </h2>
                 <p className="text-slate-600 text-lg leading-relaxed">
-                  Experience next-generation blockchain-secured authentication with 
-                  cutting-edge traceability technology for modern businesses.
+                  Experience next-generation blockchain-secured authentication
+                  with cutting-edge traceability technology for modern
+                  businesses.
                 </p>
               </div>
 
@@ -218,8 +233,12 @@ const Login = () => {
                 </div>
 
                 <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-slate-900 mb-2">Sign In</h2>
-                  <p className="text-slate-600 text-sm">Access your secure dashboard</p>
+                  <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                    Sign In
+                  </h2>
+                  <p className="text-slate-600 text-sm">
+                    Access your secure dashboard
+                  </p>
                 </div>
 
                 {errors.general && (
@@ -231,14 +250,21 @@ const Login = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Email */}
                   <div className="space-y-2">
-                    <label htmlFor="email" className="block text-sm font-semibold text-slate-800">
+                    <label
+                      htmlFor="email"
+                      className="block text-sm font-semibold text-slate-800"
+                    >
                       Email Address
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Mail className={`h-5 w-5 icon-fade ${
-                          focusedField === 'email' ? 'text-emerald-500' : 'text-slate-400'
-                        }`} />
+                        <Mail
+                          className={`h-5 w-5 icon-fade ${
+                            focusedField === "email"
+                              ? "text-emerald-500"
+                              : "text-slate-400"
+                          }`}
+                        />
                       </div>
                       <input
                         id="email"
@@ -247,43 +273,52 @@ const Login = () => {
                         autoComplete="email"
                         value={formData.email}
                         onChange={handleChange}
-                        onFocus={() => setFocusedField('email')}
-                        onBlur={() => setFocusedField('')}
+                        onFocus={() => setFocusedField("email")}
+                        onBlur={() => setFocusedField("")}
                         placeholder="Enter your email"
                         className={`glass-input block w-full pl-12 pr-4 py-4 rounded-2xl text-slate-900 focus:outline-none ${
-                          errors.email ? 'border-red-400 bg-red-50/70' : ''
+                          errors.email ? "border-red-400 bg-red-50/70" : ""
                         }`}
                         disabled={isLoading}
                       />
                     </div>
                     {errors.email && (
-                      <p className="text-red-600 text-xs mt-2">{errors.email}</p>
+                      <p className="text-red-600 text-xs mt-2">
+                        {errors.email}
+                      </p>
                     )}
                   </div>
 
                   {/* Password */}
                   <div className="space-y-2">
-                    <label htmlFor="password" className="block text-sm font-semibold text-slate-800">
+                    <label
+                      htmlFor="password"
+                      className="block text-sm font-semibold text-slate-800"
+                    >
                       Password
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Lock className={`h-5 w-5 icon-fade ${
-                          focusedField === 'password' ? 'text-emerald-500' : 'text-slate-400'
-                        }`} />
+                        <Lock
+                          className={`h-5 w-5 icon-fade ${
+                            focusedField === "password"
+                              ? "text-emerald-500"
+                              : "text-slate-400"
+                          }`}
+                        />
                       </div>
                       <input
                         id="password"
                         name="password"
-                        type={showPassword ? 'text' : 'password'}
+                        type={showPassword ? "text" : "password"}
                         autoComplete="current-password"
                         value={formData.password}
                         onChange={handleChange}
-                        onFocus={() => setFocusedField('password')}
-                        onBlur={() => setFocusedField('')}
+                        onFocus={() => setFocusedField("password")}
+                        onBlur={() => setFocusedField("")}
                         placeholder="Enter your password"
                         className={`glass-input block w-full pl-12 pr-14 py-4 rounded-2xl text-slate-900 focus:outline-none ${
-                          errors.password ? 'border-red-400 bg-red-50/70' : ''
+                          errors.password ? "border-red-400 bg-red-50/70" : ""
                         }`}
                         disabled={isLoading}
                       />
@@ -293,18 +328,25 @@ const Login = () => {
                         className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-emerald-500 transition-colors duration-200 disabled:opacity-50"
                         disabled={isLoading}
                       >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
                       </button>
                     </div>
                     {errors.password && (
-                      <p className="text-red-600 text-xs mt-2">{errors.password}</p>
+                      <p className="text-red-600 text-xs mt-2">
+                        {errors.password}
+                      </p>
                     )}
                   </div>
 
                   {/* Remember redirect info */}
                   {location.state?.from && (
                     <div className="text-xs text-slate-600 bg-blue-50/70 p-3 rounded-xl border border-blue-200">
-                      You'll be redirected to {location.state.from.pathname} after login
+                      You'll be redirected to {location.state.from.pathname}{" "}
+                      after login
                     </div>
                   )}
 
@@ -327,8 +369,6 @@ const Login = () => {
                     )}
                   </button>
                 </form>
-
-               
               </div>
             </div>
           </div>
