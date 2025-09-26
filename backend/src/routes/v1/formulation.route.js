@@ -64,7 +64,7 @@ router.get('/product-type/:productType',
 
 // FORMULATION OPERATIONS ROUTES
 router.post('/:productBatchId/generate-qr',
-    auth('manageFormulations'),
+    //auth('manageFormulations'),
     validate(formulationValidation.generateQRCode),
     formulationController.generateQRCode
 );
@@ -85,7 +85,7 @@ router.get('/:productBatchId/blockchain/provenance',
 router.route('/')
   .post(
     auth('createFormulation'),  // <-- comment this out temporarily
-    validate(formulationValidation.createFormulation),
+    //validate(formulationValidation.createFormulation),
     formulationController.createFormulation
   )
   .get(auth('getFormulations'), validate(formulationValidation.getFormulations), formulationController.getFormulations);

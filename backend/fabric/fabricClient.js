@@ -23,6 +23,7 @@ async function registerAndEnrollUser(userId, role = 'client') {
         const orgInfo = getOrgInfo(role);
         console.log(`Using org: ${orgInfo.orgName}, MSP: ${orgInfo.mspId}, CA: ${orgInfo.caName}`);
         
+    
         // FIXED: Always use org1 connection profile since admin is enrolled there
         const ccpPath = path.resolve(__dirname, '..', '..', 'fabric', 'fabric-samples', 
             'test-network', 'organizations', 'peerOrganizations', 
