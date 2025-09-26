@@ -5,55 +5,84 @@ const addProcessingStep = {
         batchId: Joi.string().required(),
     }),
     body: Joi.object().keys({
+        // ✅ FIXED: Match frontend field names exactly
+        processId: Joi.string().optional(),
+        facilityId: Joi.string().optional(),
         stepType: Joi.string().required().valid('cleaning', 'drying', 'grinding', 'sorting', 'packaging'),
-        params: Joi.when('stepType', {
+        timestamp: Joi.string().isoDate().optional(),
+        
+        // ✅ FIXED: Allow params as both object and string (for JSON.stringify)
+        params: Joi.alternatives().try(
+            Joi.object(),
+            Joi.string()
+        ).when('stepType', {
             switch: [
                 {
                     is: 'drying',
-                    then: Joi.object({
-                        temperature: Joi.string().required(),
-                        duration: Joi.string().required(),
-                        method: Joi.string().required(),
-                        humidity: Joi.string().optional(),
-                        equipment: Joi.string().optional(),
-                        notes: Joi.string().optional()
-                    })
+                    then: Joi.alternatives().try(
+                        Joi.object({
+                            temperature: Joi.string().required(),
+                            duration: Joi.string().required(),
+                            method: Joi.string().required(),
+                            humidity: Joi.string().optional(),
+                            equipment: Joi.string().optional(),
+                            operator: Joi.string().optional(),
+                            notes: Joi.string().optional()
+                        }),
+                        Joi.string() // Allow JSON string
+                    )
                 },
                 {
                     is: 'grinding',
-                    then: Joi.object({
-                        mesh_size: Joi.string().required(),
-                        temperature: Joi.string().optional(),
-                        equipment: Joi.string().optional(),
-                        notes: Joi.string().optional()
-                    })
+                    then: Joi.alternatives().try(
+                        Joi.object({
+                            meshsize: Joi.string().required(),  // ✅ FIXED: chaincode uses 'meshsize'
+                            temperature: Joi.string().optional(),
+                            equipment: Joi.string().optional(),
+                            operator: Joi.string().optional(),
+                            notes: Joi.string().optional()
+                        }),
+                        Joi.string() // Allow JSON string
+                    )
                 },
                 {
                     is: 'cleaning',
-                    then: Joi.object({
-                        method: Joi.string().optional(),
-                        duration: Joi.string().optional(),
-                        equipment: Joi.string().optional(),
-                        notes: Joi.string().optional()
-                    }).optional()
+                    then: Joi.alternatives().try(
+                        Joi.object({
+                            method: Joi.string().optional(),
+                            duration: Joi.string().optional(),
+                            equipment: Joi.string().optional(),
+                            operator: Joi.string().optional(),
+                            notes: Joi.string().optional()
+                        }).optional(),
+                        Joi.string().optional() // Allow JSON string
+                    )
                 },
                 {
                     is: 'sorting',
-                    then: Joi.object({
-                        method: Joi.string().optional(),
-                        criteria: Joi.string().optional(),
-                        equipment: Joi.string().optional(),
-                        notes: Joi.string().optional()
-                    }).optional()
+                    then: Joi.alternatives().try(
+                        Joi.object({
+                            method: Joi.string().optional(),
+                            criteria: Joi.string().optional(),
+                            equipment: Joi.string().optional(),
+                            operator: Joi.string().optional(),
+                            notes: Joi.string().optional()
+                        }).optional(),
+                        Joi.string().optional() // Allow JSON string
+                    )
                 },
                 {
                     is: 'packaging',
-                    then: Joi.object({
-                        container_type: Joi.string().optional(),
-                        seal_type: Joi.string().optional(),
-                        equipment: Joi.string().optional(),
-                        notes: Joi.string().optional()
-                    }).optional()
+                    then: Joi.alternatives().try(
+                        Joi.object({
+                            container_type: Joi.string().optional(),
+                            seal_type: Joi.string().optional(),
+                            equipment: Joi.string().optional(),
+                            operator: Joi.string().optional(),
+                            notes: Joi.string().optional()
+                        }).optional(),
+                        Joi.string().optional() // Allow JSON string
+                    )
                 }
             ]
         })

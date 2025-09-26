@@ -1,20 +1,80 @@
-// src/controllers/processing.controller.js
+// src/controllers/processing.controller.js - FIXED
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const ProcessingService = require('../services/processing.service');
 const pick = require('../utils/pick');
 
 class ProcessingController {
-
-    // Add processing step to batch
     static addProcessingStep = catchAsync(async (req, res) => {
-        const { batchId } = req.params;
-        const result = await ProcessingService.addProcessingStep(batchId, req.body, req.user);
-        res.status(httpStatus.CREATED).json({
-            success: true,
-            message: 'Processing step added successfully',
-            data: result
+        console.log('=== PROCESSING CONTROLLER DEBUG ===');
+        console.log('Headers:', {
+            authorization: req.headers.authorization ? 'Present' : 'Missing',
+            'content-type': req.headers['content-type']
         });
+        console.log('Batch ID from params:', req.params.batchId);
+        console.log('Request body:', JSON.stringify(req.body, null, 2));
+        
+        // ✅ CRITICAL FIX: Check and validate req.user
+        console.log('req.user exists:', !!req.user);
+        console.log('Full req.user:', req.user);
+        
+        if (!req.user) {
+            console.error('❌ req.user is null/undefined - authentication failed');
+            return res.status(httpStatus.UNAUTHORIZED).json({
+                success: false,
+                message: 'Authentication failed - user not found in request',
+                debug: 'req.user is null or undefined'
+            });
+        }
+
+        // ✅ FIXED: Ensure user has required properties with defaults
+        const processUser = {
+            id: req.user.id || req.user._id,
+            blockchainUserId: req.user.blockchainUserId || req.user.id,
+            participantType: req.user.participantType || req.user.role,
+            isBlockchainEnrolled: req.user.isBlockchainEnrolled !== undefined ? req.user.isBlockchainEnrolled : true,
+            name: req.user.name || 'Unknown User',
+            role: req.user.role,
+            location: req.user.location
+        };
+
+        console.log('Processed user object:', JSON.stringify(processUser, null, 2));
+
+        // ✅ FIXED: Additional validation
+        if (!processUser.blockchainUserId) {
+            console.error('❌ User missing blockchainUserId');
+            return res.status(httpStatus.BAD_REQUEST).json({
+                success: false,
+                message: 'User must have blockchain ID'
+            });
+        }
+
+        try {
+            const { batchId } = req.params;
+            
+            console.log('✅ Calling ProcessingService.addProcessingStep...');
+            const result = await ProcessingService.addProcessingStep(batchId, req.body, processUser);
+            console.log('✅ ProcessingService returned:', result);
+
+            res.status(httpStatus.CREATED).json({
+                success: true,
+                message: 'Processing step added successfully',
+                data: result
+            });
+
+        } catch (error) {
+            console.error('❌ Processing Controller Error:', error);
+            console.error('Error stack:', error.stack);
+            
+            res.status(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message || 'Failed to add processing step',
+                error: process.env.NODE_ENV === 'development' ? {
+                    stack: error.stack,
+                    statusCode: error.statusCode
+                } : undefined
+            });
+        }
     });
 
     // Get single processing step
@@ -179,27 +239,22 @@ class ProcessingController {
 
         let filter = {};
 
-        // Filter based on user type
         if (userType === 'processor') {
             filter.facilityId = userId;
         }
-        // Admin can see all
 
-        // Recent processing steps
         const recentProcessing = await ProcessingService.queryProcessingSteps(filter, {
             page: 1,
             limit: 10,
             sortBy: '-timestamp'
         });
 
-        // Statistics
         const statistics = await ProcessingService.getProcessingStatistics(filter);
 
-        // Capacity if processor
         let capacity = null;
         if (userType === 'processor') {
             capacity = await ProcessingService.getProcessingCapacity(userId, {
-                from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // Last 30 days
+                from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
                 to: new Date().toISOString()
             });
         }
@@ -227,7 +282,6 @@ class ProcessingController {
 
         const statistics = await ProcessingService.getProcessingStatistics(filter);
 
-        // Calculate additional efficiency metrics
         const efficiencyMetrics = {
             ...statistics,
             processingScore: statistics.efficiency.averageStepsPerBatch > 0
@@ -236,7 +290,6 @@ class ProcessingController {
             recommendations: []
         };
 
-        // Add recommendations based on metrics
         if (statistics.efficiency.averageStepsPerBatch < 3) {
             efficiencyMetrics.recommendations.push('Consider adding quality control steps');
         }
@@ -257,7 +310,6 @@ class ProcessingController {
 
         const processingChain = await ProcessingService.getProcessingChain(batchId);
 
-        // Format timeline data
         const timeline = processingChain.processingChain.map((step, index) => ({
             step: index + 1,
             processId: step.processId,
@@ -288,12 +340,10 @@ class ProcessingController {
         const { stepType } = req.params;
         const filter = { stepType };
 
-        // Get all processing steps of this type
         const processingSteps = await ProcessingService.queryProcessingSteps(filter, {
             limit: 1000
         });
 
-        // Analyze parameters and their frequency
         const parameterAnalysis = {};
         const temperatureDistribution = [];
         const durationDistribution = [];

@@ -55,7 +55,7 @@ export default function FarmerCollectionPage() {
     {
       onSuccess: (result) => {
         console.log("Collection event created:", result);
-        setTimeout(() => navigate("/dashboard"), 2000);
+        setTimeout(() => navigate("/collection"), 2000);
       },
     }
   );
