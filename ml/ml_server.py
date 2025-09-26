@@ -108,8 +108,6 @@ def extract_info(raw_text: str, backend_url: str):
     }
 
     # 2️⃣ Send data to backend
-    backend_url = "http://localhost:3000/v1/herbs/data"
-
     try:
         response = requests.post(backend_url, json=data)
         response.raise_for_status()  # raise error if status code is 4xx/5xx
@@ -119,10 +117,32 @@ def extract_info(raw_text: str, backend_url: str):
         print("Error sending data to backend:", e)
         backend_response = None
 
-    # 3️⃣ Return the extracted data and backend response if needed
+    # 3️⃣ Send to SMS collection endpoint
+    collection_url = "http://localhost:3000/v1/sms/create-collection"
+    collection_data = {
+        "farmer_id": data.get("farmer_id"),
+        "herb_id": data.get("herb_id"),
+        "herb_name": data.get("herb_name"),
+        "quantity_grams": data.get("quantity_grams"),
+        "source_text": raw_text,
+        "processed_text": data.get("text_en"),
+        "collection_type": "nlp_processed"
+    }
+
+    try:
+        collection_response = requests.post(collection_url, json=collection_data)
+        collection_response.raise_for_status()
+        collection_result = collection_response.json()
+        print("Collection created successfully:", collection_result)
+    except requests.exceptions.RequestException as e:
+        print("Error creating collection:", e)
+        collection_result = None
+
+    # 4️⃣ Return the extracted data and both responses
     return {
         "extracted_data": data,
-        "backend_response": backend_response
+        "backend_response": backend_response,
+        "collection_response": collection_result
     }
 
 def extract_lat_lon_timestamp(text: str):
@@ -139,6 +159,11 @@ def extract_lat_lon_timestamp(text: str):
 # -------------------------------
 # Routes
 # -------------------------------
+
+# Health check route
+@app.route('/', methods=['GET'])
+def health_check():
+    return jsonify({"status": "ML Server is running", "port": 5000}), 200
 
 # 1️⃣ OCR only (latitude, longitude, timestamp)
 @app.route('/ocr', methods=['POST'])
@@ -159,7 +184,7 @@ def ocr_only():
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-# 2️⃣ NLP only: accept JSON or form-data
+# 2️⃣ NLP only: accept JSON or form-data (now with collection creation)
 @app.route('/nlp', methods=['POST'])
 def nlp_only():
     text = None
@@ -171,12 +196,14 @@ def nlp_only():
     if not text:
         return jsonify({"error": "No text provided"}), 400
     try:
-        nlp_result = extract_info(text)
+        # Process NLP and create collection
+        backend_url = "http://localhost:3000/v1/herbs/data"
+        nlp_result = extract_info(text, backend_url)
         return jsonify(nlp_result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# 3️⃣ Full pipeline: OCR + NLP
+# 3️⃣ Full pipeline: OCR + NLP (now with collection creation)
 @app.route('/process', methods=['POST'])
 def process_image():
     if 'file' not in request.files:
@@ -187,15 +214,20 @@ def process_image():
     try:
         img = Image.open(temp_path)
         text = pytesseract.image_to_string(img)
-        nlp_result = extract_info(text)
+        backend_url = "http://localhost:3000/v1/herbs/data"
+        nlp_result = extract_info(text, backend_url)
         lat_lon_time = extract_lat_lon_timestamp(text)
         result = {
-            "farmer_id": nlp_result["farmer_id"],
-            "herb_id": nlp_result["herb_id"],
-            "quantity_grams": nlp_result["quantity_grams"],
+            "farmer_id": nlp_result["extracted_data"]["farmer_id"],
+            "herb_id": nlp_result["extracted_data"]["herb_id"],
+            "herb_name": nlp_result["extracted_data"]["herb_name"],
+            "quantity_grams": nlp_result["extracted_data"]["quantity_grams"],
             "latitude": lat_lon_time["latitude"],
             "longitude": lat_lon_time["longitude"],
-            "timestamp": lat_lon_time["timestamp"]
+            "timestamp": lat_lon_time["timestamp"],
+            "text_en": nlp_result["extracted_data"]["text_en"],
+            "backend_response": nlp_result["backend_response"],
+            "collection_response": nlp_result["collection_response"]
         }
         return jsonify(result)
     except Exception as e:
