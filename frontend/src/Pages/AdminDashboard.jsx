@@ -248,7 +248,10 @@ export default function AdminDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${BASE_URL}/herbs`);
+      const headers = await getAuthHeaders();
+      const response = await axios.get(`${BASE_URL}/herbs`, {
+        headers: headers,
+      });
 
       // Use only actual API data
       const transformedHerbs = response.data.data.results.map((herb) => ({
@@ -262,7 +265,7 @@ export default function AdminDashboard() {
 
       setHerbs(transformedHerbs);
     } catch (err) {
-      console.error("Error fetching herbs:", err);
+      console.error("Error fetching herbsss:", err);
       setError("Failed to fetch herbs data from API");
       setHerbs([]);
     } finally {

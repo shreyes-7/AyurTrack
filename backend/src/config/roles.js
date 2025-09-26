@@ -59,6 +59,12 @@ const allRoles = {
     // Provenance
     'getProvenance',
     'queryByPrefix',
+    //Herb
+    'getHerbs',
+    'manageHerbs',
+    'createHerbs',
+    'deleteHerbs',
+    'updateHerbs',
     
     // System operations
     'viewOwnProfile',
