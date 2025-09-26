@@ -12,28 +12,28 @@ const createUser = async (userBody) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
   
-  const generatePassword = () => {
-    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    const numbers = "0123456789";
-    const symbols = "!@#$%^&*()_+[]{}|;:,.<>?";
+const generatePassword = () => {
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
 
-    // Random length between 8 and 12
-    const length = Math.floor(Math.random() * (12 - 8 + 1)) + 8;
+  // Random length between 8 and 12
+  const length = Math.floor(Math.random() * (12 - 8 + 1)) + 8;
 
-    // Ensure at least one letter and one number
-    let password = '';
-    password += letters.charAt(Math.floor(Math.random() * letters.length));
-    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  // Ensure at least one letter and one number
+  let password = '';
+  password += letters.charAt(Math.floor(Math.random() * letters.length));
+  password += numbers.charAt(Math.floor(Math.random() * numbers.length));
 
-    const allChars = letters + numbers + symbols;
-    for (let i = 2; i < length; i++) {
-      password += allChars.charAt(Math.floor(Math.random() * allChars.length));
-    }
+  const allChars = letters + numbers; // only alphanumeric
+  for (let i = 2; i < length; i++) {
+    password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+  }
 
-    // Shuffle password to avoid predictable pattern
-    password = password.split('').sort(() => 0.5 - Math.random()).join('');
-    return password;
-  };
+  // Shuffle password to avoid predictable pattern
+  password = password.split('').sort(() => 0.5 - Math.random()).join('');
+  return password;
+};
+
 
   const generatedPassword = generatePassword();
   console.log("Generated Password:", generatedPassword);

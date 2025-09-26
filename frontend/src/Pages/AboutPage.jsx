@@ -464,11 +464,11 @@ export default function About() {
                   {/* Profile Image */}
                   <div className="relative mb-6">
                     <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden bg-gradient-to-br from-green-400 to-emerald-500 p-1 group-hover:scale-105 transition-transform duration-300">
-                      <img
+                      {/* <img
                         src={member.img}
                         alt={member.name}
                         className="w-full h-full object-cover rounded-2xl"
-                      />
+                      /> */}
                     </div>
                     <motion.div
                       initial={{ scale: 0 }}
