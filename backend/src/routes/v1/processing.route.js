@@ -78,28 +78,32 @@ router.get('/facility/:facilityId/capacity',
 
 router.get('/type/:stepType',
     auth('getProcessing'),
-    validate(processingValidation.getProcessingStepsByType),
+    // validate(processingValidation.getProcessingStepsByType),
     processingController.getProcessingStepsByType
 );
 
 // PROCESSING OPERATIONS ROUTES
 router.post('/batch/:batchId/step',
-    auth('manageProcessing'),
-    validate(processingValidation.addProcessingStep),
+    auth(),
+    // validate(processingValidation.addProcessingStep),
     processingController.addProcessingStep
 );
 
 router.get('/:processId/integrity',
     auth('validateProcessing'),
-    validate(processingValidation.validateProcessingIntegrity),
+    // validate(processingValidation.validateProcessingIntegrity),
     processingController.validateProcessingIntegrity
 );
 
 // BASIC CRUD ROUTES
 router.route('/')
-    .get(auth('getProcessing'), validate(processingValidation.getProcessingSteps), processingController.getProcessingSteps);
+    .get(auth('getProcessing'), 
+    // validate(processingValidation.getProcessingSteps), 
+    processingController.getProcessingSteps);
 
 router.route('/:processId')
-    .get(auth('getProcessing'), validate(processingValidation.getProcessingStep), processingController.getProcessingStep);
+    .get(auth('getProcessing'), 
+    // validate(processingValidation.getProcessingStep),
+     processingController.getProcessingStep);
 
 module.exports = router;

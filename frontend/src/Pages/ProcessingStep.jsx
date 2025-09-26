@@ -6,20 +6,21 @@ import { ButtonLoader } from "../Components/Loader";
 import Layout from "../Components/Layout";
 import axios from "axios";
 import { getAuthHeaders } from "../utils/tokenUtils";
+import { BASE_URL } from "../../api";
 
 // Processing step types configuration
 const PROCESSING_STEPS = [
   {
     id: 'cleaning',
     name: 'Cleaning',
-    icon: '🧽',
+    icon: '🧹',
     description: 'Remove impurities, foreign matter, and damaged materials',
     color: 'bg-blue-100 text-blue-800 border-blue-200',
     hasParams: false
   },
   {
     id: 'drying',
-    name: 'Drying', 
+    name: 'Drying',
     icon: '🌡️',
     description: 'Moisture reduction using controlled temperature and airflow',
     color: 'bg-orange-100 text-orange-800 border-orange-200',
@@ -29,82 +30,99 @@ const PROCESSING_STEPS = [
   {
     id: 'grinding',
     name: 'Grinding',
-    icon: '⚙️', 
+    icon: '⚙️',
     description: 'Size reduction to achieve desired mesh size',
     color: 'bg-green-100 text-green-800 border-green-200',
     hasParams: true,
-    params: ['mesh_size', 'temperature']
+    params: ['meshsize', 'temperature']
   }
 ];
 
-export default async function ProcessorPage() {
+// ✅ FIXED: Removed async from component declaration
+export default function ProcessorPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [timestampStatus, setTimestampStatus] = useState('idle');
-  const headers=  await getAuthHeaders()
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   // Get processor info from session/context
   const [processorInfo, setProcessorInfo] = useState(null);
   
   const [formData, setFormData] = useState({
     // User inputs - ALL INPUT FIELDS
-    batchId: "",              // Input: Batch ID to identify which herb batch to process
-    herbSpecies: "",          // Input: Name of herb species (tells processor which herb they're working on)
-    stepType: "",            // Dropdown: cleaning/drying/grinding
+    batchId: '', // Input: Batch ID to identify which herb batch to process
+    herbSpecies: '', // Input: Name of herb species (tells processor which herb they're working on)
+    stepType: '', // Dropdown: cleaning/drying/grinding
     
     // Processing parameters (varies by step type)
     // Drying parameters
-    temperature: "",          // Input: e.g., "40C"
-    duration: "",            // Input: e.g., "8hours"
-    method: "",              // Input: e.g., "shade-dried"
+    temperature: '', // Input: e.g., "40C"
+    duration: '', // Input: e.g., "8hours"
+    method: '', // Input: e.g., "shade-dried"
     
     // Grinding parameters  
-    meshSize: "",            // Input: e.g., "80"
-    grindingTemperature: "", // Input: e.g., "ambient"
+    meshSize: '', // Input: e.g., "80"
+    grindingTemperature: '', // Input: e.g., "ambient"
     
     // Auto-generated fields (backend will generate these)
-    processId: "",           // PROC_${Date.now()}_${facilityId}
-    facilityId: "",          // From logged-in processor session
-    timestamp: "",           // Current ISO timestamp
+    processId: '', // "PROC" + Date.now()
+    facilityId: '', // From logged-in processor session
+    timestamp: '', // Current ISO timestamp
     
     // Additional optional inputs
-    operatorName: "",        // Input: Name of operator
-    equipmentUsed: "",       // Input: Equipment used for processing
-    notes: ""                // Input: Additional processing notes
+    operatorName: '', // Input: Name of operator
+    equipmentUsed: '', // Input: Equipment used for processing
+    notes: '' // Input: Additional processing notes
   });
 
-  const { submit, submitting, error, success } = useSubmit(
+  const { submit, submitting, error: submitError, success } = useSubmit(
     apiEndpoints.addProcessingStep,
     {
       onSuccess: (result) => {
         console.log("Processing step created:", result);
-        setTimeout(() => navigate("/dashboard"), 2000);
+        setTimeout(() => navigate("/processing"), 2000);
       },
     }
   );
 
-  // Simulate getting processor info from authentication context
+  // ✅ FIXED: Move async operations inside useEffect
   useEffect(() => {
-    // In real implementation, this would come from your auth context/JWT token
-    const mockProcessorInfo = {
-      id: "P266201K3X", // Following your ID pattern: P + timestamp + random
-      name: "Advanced Herbal Processing Facility",
-      blockchainUserId: "P266201K3X",
-      mspId: "Org1MSP", 
-      location: "Jaipur Industrial Area",
-      license: "PROC2024001",
-      capacity: "1000kg/day",
-      certifications: ["GMP", "ISO22000"]
+    const initializeComponent = async () => {
+      try {
+        // Get real user from localStorage like other components
+        const user = JSON.parse(localStorage.getItem('ayurtrack_user') || '{}');
+        
+        const processorData = {
+          id: user.blockchainUserId || "P266201K3X",
+          name: user.name || "Advanced Herbal Processing Facility",
+          blockchainUserId: user.blockchainUserId || "P266201K3X",
+          mspId: "Org1MSP",
+          role: user.role || "processor",
+          location: "Jaipur Industrial Area",
+          license: "PROC-2024-001",
+          capacity: "1000kg/day",
+          certifications: ["GMP", "ISO22000"]
+        };
+        
+        console.log('Current processor info:', processorData);
+        setProcessorInfo(processorData);
+        
+        // Generate process ID
+        const timestamp = Date.now();
+        setFormData(prev => ({
+          ...prev,
+          facilityId: processorData.blockchainUserId,
+          processId: `PROC_${timestamp}_${processorData.blockchainUserId}`
+        }));
+        
+      } catch (error) {
+        console.error('Error initializing component:', error);
+        setError('Failed to initialize processor information');
+      }
     };
-    setProcessorInfo(mockProcessorInfo);
-    
-    // Generate process ID
-    const timestamp = Date.now();
-    setFormData(prev => ({
-      ...prev,
-      facilityId: mockProcessorInfo.blockchainUserId,
-      processId: `PROC_${timestamp}_${mockProcessorInfo.blockchainUserId}`
-    }));
+
+    initializeComponent();
   }, []);
 
   const handleChange = (e) => {
@@ -161,6 +179,7 @@ export default async function ProcessorPage() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
+  // ✅ FIXED: Complete handleSubmit function
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -174,46 +193,112 @@ export default async function ProcessorPage() {
       return;
     }
 
-    // Prepare params object based on step type (following chaincode structure)
-    let params = {};
-    
-    if (formData.stepType === 'cleaning') {
-      // No additional parameters for cleaning
-      params = {};
-    } else if (formData.stepType === 'drying') {
-      params = {
-        temperature: formData.temperature,
-        duration: formData.duration,
-        method: formData.method
+    setLoading(true);
+    setError(null);
+
+    try {
+      // ✅ Get auth headers like other components
+      const headers = await getAuthHeaders();
+      console.log('Auth Headers:', headers);
+      console.log('Current user info:', JSON.parse(localStorage.getItem('ayurtrack_user') || '{}'));
+
+      // Prepare params object based on step type (following chaincode structure)
+      let params = {};
+      
+      if (formData.stepType === 'cleaning') {
+        // No additional parameters for cleaning
+        params = {};
+      } else if (formData.stepType === 'drying') {
+        params = {
+          temperature: formData.temperature,
+          duration: formData.duration,
+          method: formData.method
+        };
+      } else if (formData.stepType === 'grinding') {
+        params = {
+          meshsize: formData.meshSize, // Note: chaincode uses 'meshsize'
+          temperature: formData.grindingTemperature
+        };
+      }
+
+      // Add optional parameters
+      if (formData.operatorName) params.operator = formData.operatorName;
+      if (formData.equipmentUsed) params.equipment = formData.equipmentUsed;
+      if (formData.notes) params.notes = formData.notes;
+
+      // ✅ FIXED: Prepare data matching your chaincode AddProcessingStep function
+      const submissionData = {
+        processId: formData.processId,
+        batchId: formData.batchId,
+        facilityId: processorInfo.blockchainUserId,
+        stepType: formData.stepType,
+        params: JSON.stringify(params), // Chaincode expects params as JSON string
+        timestamp: formData.timestamp
       };
-    } else if (formData.stepType === 'grinding') {
-      params = {
-        mesh_size: formData.meshSize,
-        temperature: formData.grindingTemperature
-      };
+
+      console.log("✅ Submitting processing step data:", submissionData);
+
+      // ✅ FIXED: Use correct endpoint URL
+      const response = await axios.post(
+        `${BASE_URL}/processing/batch/${formData.batchId}/step`, 
+        submissionData,
+        { headers }
+      );
+      
+      console.log('✅ Processing step created successfully:', response.data);
+      
+      // Show success and redirect
+      alert('Processing step recorded successfully!');
+      navigate('/processing');
+      
+    } catch (err) {
+      console.error('❌ Error submitting processing step:', err);
+      console.error('Response status:', err.response?.status);
+      console.error('Response data:', err.response?.data);
+      
+      let errorMessage = 'Failed to submit processing step. Please try again.';
+      
+      if (err.response?.status === 403) {
+        errorMessage = 'Access denied. Make sure you have processor permissions and are logged in correctly.';
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please login again.';
+        navigate('/login');
+        return;
+      } else if (err.response?.status === 404) {
+        errorMessage = 'Processing endpoint not found. Please check if the batch ID exists.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      setError(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
     }
-
-    // Add optional parameters
-    if (formData.operatorName) params.operator = formData.operatorName;
-    if (formData.equipmentUsed) params.equipment = formData.equipmentUsed;
-    if (formData.notes) params.notes = formData.notes;
-
-    // Prepare data in the format expected by the chaincode
-    const submissionData = {
-      processId: formData.processId,
-      batchId: formData.batchId,
-      facilityId: processorInfo.blockchainUserId,
-      stepType: formData.stepType,
-      params: JSON.stringify(params), // Chaincode expects params as JSON string
-      timestamp: formData.timestamp
-    };
-    const reponse = await axios.post(`${BASE_URL}/processing/batch/${batchId}/step`,submissionData,{ headers: headers });
-
-    console.log("Submitting processing step data:", submissionData,{headers:headers});
-    await submit(submissionData);
   };
 
-  const getSelectedStepType = () => PROCESSING_STEPS.find(s => s.id === formData.stepType);
+  const getSelectedStepType = () => {
+    return PROCESSING_STEPS.find(s => s.id === formData.stepType);
+  };
+
+  // Show loading state while processor info is loading
+  if (!processorInfo) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 py-8 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full mb-4">
+                <span className="text-2xl">⚙️</span>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">Loading...</h1>
+              <p className="text-gray-600">Initializing processing portal...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -222,7 +307,7 @@ export default async function ProcessorPage() {
           {/* Header Section */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full mb-4">
-              <span className="text-2xl">🏭</span>
+              <span className="text-2xl">⚙️</span>
             </div>
             <h1 className="text-4xl font-bold text-gray-800 mb-2">
               Processing Operations Portal
@@ -236,9 +321,10 @@ export default async function ProcessorPage() {
                 <div className="text-sm text-orange-800">
                   <strong>Processing Facility:</strong> {processorInfo.name} 
                   <span className="ml-2 font-mono text-xs">({processorInfo.blockchainUserId})</span>
+                  <span className="ml-2 text-xs">Role: {processorInfo.role}</span>
                 </div>
                 <div className="text-xs text-orange-600 mt-1">
-                  License: {processorInfo.license} | Capacity: {processorInfo.capacity} | Location: {processorInfo.location}
+                  License: {processorInfo.license} • Capacity: {processorInfo.capacity} • Location: {processorInfo.location}
                 </div>
               </div>
             )}
@@ -295,10 +381,10 @@ export default async function ProcessorPage() {
             </div>
 
             {/* Error/Success Messages */}
-            {error && (
+            {(error || submitError) && (
               <div className="mx-6 mt-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
                 <span className="text-red-600 text-2xl mr-3">⚠️</span>
-                <div className="text-red-800">{error}</div>
+                <div className="text-red-800">{error || submitError}</div>
               </div>
             )}
 
@@ -335,7 +421,8 @@ export default async function ProcessorPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <span className="flex items-center">
-                        📋 Batch ID * <span className="ml-2 text-xs text-gray-500">(Identifies which batch to process)</span>
+                        Batch ID *
+                        <span className="ml-2 text-xs text-gray-500">(Identifies which batch to process)</span>
                       </span>
                     </label>
                     <input
@@ -355,7 +442,8 @@ export default async function ProcessorPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <span className="flex items-center">
-                        🌿 Herb Species * <span className="ml-2 text-xs text-gray-500">(Tells you which herb you're processing)</span>
+                        Herb Species *
+                        <span className="ml-2 text-xs text-gray-500">(Tells you which herb you're processing)</span>
                       </span>
                     </label>
                     <input
@@ -416,7 +504,7 @@ export default async function ProcessorPage() {
                             relative cursor-pointer rounded-lg border-2 p-6 transition-all duration-200
                             ${formData.stepType === step.id
                               ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200'
-                              : `border-gray-200 hover:border-gray-300 hover:bg-gray-50`
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                             }
                           `}
                           onClick={() => setFormData(prev => ({ ...prev, stepType: step.id }))}
@@ -430,10 +518,10 @@ export default async function ProcessorPage() {
                                 Requires parameters
                               </div>
                             )}
-                            {formData.stepType === step.id && (
-                              <div className="absolute top-3 right-3 text-orange-500">✓</div>
-                            )}
                           </div>
+                          {formData.stepType === step.id && (
+                            <div className="absolute top-3 right-3 text-orange-500">✓</div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -464,24 +552,23 @@ export default async function ProcessorPage() {
                 <div className="space-y-6">
                   <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
                     <span className="text-amber-600 mr-2">⚙️</span>
-                    Processing Parameters & Configuration
+                    Processing Parameters Configuration
                   </h2>
 
                   {/* Cleaning Step - No Parameters */}
                   {formData.stepType === 'cleaning' && (
                     <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-lg border border-blue-200">
                       <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
-                        <span className="mr-2">🧽</span>
+                        <span className="mr-2">🧹</span>
                         Cleaning Process Configuration
                       </h3>
-                      
                       <div className="bg-blue-100 p-4 rounded-lg">
                         <div className="text-sm text-blue-800">
                           <strong>Standard Cleaning Process:</strong> Remove foreign matter, damaged materials, and impurities according to standard operating procedures. No additional parameters required.
                         </div>
-                        <div className="mt-2 text-xs text-blue-600">
-                          This step will be recorded with standard cleaning protocols for <strong>{formData.herbSpecies}</strong>.
-                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-blue-600">
+                        This step will be recorded with standard cleaning protocols for <strong>{formData.herbSpecies}</strong>.
                       </div>
                     </div>
                   )}
@@ -493,7 +580,6 @@ export default async function ProcessorPage() {
                         <span className="mr-2">🌡️</span>
                         Drying Process Configuration for {formData.herbSpecies}
                       </h3>
-                      
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -508,10 +594,9 @@ export default async function ProcessorPage() {
                             placeholder="e.g., 40C"
                           />
                           <div className="mt-1 text-xs text-gray-600">
-                            Include unit (°C or °F)
+                            Include unit (C or F)
                           </div>
                         </div>
-
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Duration *
@@ -528,7 +613,6 @@ export default async function ProcessorPage() {
                             Include time unit (hours/minutes)
                           </div>
                         </div>
-
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Method *
@@ -546,7 +630,6 @@ export default async function ProcessorPage() {
                           </div>
                         </div>
                       </div>
-
                       <div className="mt-4 p-3 bg-orange-100 rounded-lg">
                         <div className="text-sm text-orange-800">
                           <strong>Drying Guidelines for {formData.herbSpecies}:</strong> Maintain consistent temperature and airflow for optimal moisture reduction while preserving active compounds.
@@ -562,7 +645,6 @@ export default async function ProcessorPage() {
                         <span className="mr-2">⚙️</span>
                         Grinding Process Configuration for {formData.herbSpecies}
                       </h3>
-                      
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -580,7 +662,6 @@ export default async function ProcessorPage() {
                             Mesh number (higher = finer powder)
                           </div>
                         </div>
-
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Temperature *
@@ -598,7 +679,6 @@ export default async function ProcessorPage() {
                           </div>
                         </div>
                       </div>
-
                       <div className="mt-4 p-3 bg-green-100 rounded-lg">
                         <div className="text-sm text-green-800">
                           <strong>Grinding Standards for {formData.herbSpecies}:</strong> Control particle size and prevent heat generation to maintain product quality and bioactive compounds.
@@ -622,7 +702,6 @@ export default async function ProcessorPage() {
                         placeholder="Name of the processing operator"
                       />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Equipment Used (Optional)
@@ -700,12 +779,16 @@ export default async function ProcessorPage() {
                        timestampStatus === 'success' ? '✓ Timestamp Set' :
                        '🕒 Set Current Timestamp'}
                     </button>
+
+                    <div className="mt-2 text-xs text-gray-600">
+                      Click to capture the current date and time when processing is completed
+                    </div>
                   </div>
 
                   {/* Processing Summary */}
                   <div className="bg-white border border-gray-200 rounded-lg p-6">
                     <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
-                      <span className="mr-2">📊</span>
+                      <span className="mr-2">📋</span>
                       Processing Summary
                     </h3>
                     
@@ -751,7 +834,7 @@ export default async function ProcessorPage() {
 
                     {/* Parameters Summary */}
                     <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-medium text-gray-800 mb-2">Processing Parameters:</h4>
+                      <h4 className="font-medium text-gray-800 mb-2">Processing Parameters</h4>
                       {formData.stepType === 'cleaning' && (
                         <div className="text-sm text-gray-600">
                           Standard cleaning process for {formData.herbSpecies} - no additional parameters
@@ -759,18 +842,18 @@ export default async function ProcessorPage() {
                       )}
                       {formData.stepType === 'drying' && (
                         <div className="text-sm text-gray-600">
-                          Temperature: {formData.temperature} | Duration: {formData.duration} | Method: {formData.method}
+                          Temperature: {formData.temperature} • Duration: {formData.duration} • Method: {formData.method}
                         </div>
                       )}
                       {formData.stepType === 'grinding' && (
                         <div className="text-sm text-gray-600">
-                          Mesh Size: {formData.meshSize} | Temperature: {formData.grindingTemperature}
+                          Mesh Size: {formData.meshSize} • Temperature: {formData.grindingTemperature}
                         </div>
                       )}
                       {(formData.operatorName || formData.equipmentUsed) && (
                         <div className="text-sm text-gray-600 mt-2">
-                          {formData.operatorName && `Operator: ${formData.operatorName} | `}
-                          {formData.equipmentUsed && `Equipment: ${formData.equipmentUsed}`}
+                          {formData.operatorName && `Operator: ${formData.operatorName}`}
+                          {formData.equipmentUsed && ` • Equipment: ${formData.equipmentUsed}`}
                         </div>
                       )}
                     </div>
@@ -820,16 +903,16 @@ export default async function ProcessorPage() {
                       
                       <button
                         type="submit"
-                        disabled={submitting || !validateStep(1) || !validateStep(2) || !validateStep(3)}
+                        disabled={submitting || loading || !validateStep(1) || !validateStep(2) || !validateStep(3)}
                         className={`
                           px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center
-                          ${submitting
+                          ${(submitting || loading)
                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                             : 'bg-gradient-to-r from-green-500 to-blue-500 text-white hover:from-green-600 hover:to-blue-600'
                           }
                         `}
                       >
-                        {submitting ? (
+                        {(submitting || loading) ? (
                           <>
                             <ButtonLoader />
                             Recording to Blockchain...

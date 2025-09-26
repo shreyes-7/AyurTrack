@@ -95,15 +95,11 @@ class HerbService {
             }
 
             // Pagination options
-            const page = parseInt(options.page) || 1;
-            const limit = parseInt(options.limit) || 10;
             const sortBy = options.sortBy || 'name';
 
             const results = await Herb.paginate(query, {
-                page,
-                limit,
                 sort: { [sortBy]: 1 },
-                select: 'id name scientificName commonNames category parts speciesRules regulatoryInfo cultivationInfo'
+                select: 'herbId name scientificName commonNames category parts speciesRules regulatoryInfo cultivationInfo'
             });
 
             console.log('✅ Herbs retrieved from MongoDB:', results.totalResults);

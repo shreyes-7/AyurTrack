@@ -104,12 +104,14 @@ const HerbSchema = new mongoose.Schema({
 
 HerbSchema.plugin(toJSON, {
     transform: (doc, ret) => {
-        ret.id = ret.id;
-        delete ret._id;
-        delete ret.__v;
+        ret.id = ret.id;         // Keep custom id (HTURMERIC1234)
+        ret.mongoId = ret._id;   // Keep MongoDB's _id as mongoId
+        delete ret._id;          // Remove the original _id field
+        delete ret.__v;          // Remove version key
         return ret;
     }
 });
+
 HerbSchema.plugin(paginate);
 
 // Enhanced indexes

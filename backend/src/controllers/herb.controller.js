@@ -25,7 +25,7 @@ class HerbController {
     });
 
     static getAllHerbs = catchAsync(async (req, res) => {
-        const filter = pick(req.query, ['id', 'name', 'category', 'scientificName', 'hasSpeciesRules']);
+        const filter = pick(req.query, ['herbId', 'name', 'category', 'scientificName', 'hasSpeciesRules']);
         const options = pick(req.query, ['page', 'limit', 'sortBy']);
 
         const result = await HerbService.getAllHerbs(filter, options);
