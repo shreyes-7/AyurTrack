@@ -171,10 +171,13 @@ def nlp_only():
     if not text:
         return jsonify({"error": "No text provided"}), 400
     try:
-        nlp_result = extract_info(text)
+        # Fix: Pass the backend_url argument
+        backend_url = "http://localhost:3000/v1/herbs/data"
+        nlp_result = extract_info(text, backend_url)
         return jsonify(nlp_result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # 3️⃣ Full pipeline: OCR + NLP
 @app.route('/process', methods=['POST'])

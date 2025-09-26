@@ -59,3 +59,5 @@ fabric.tar.gz
 frontend/node_modules/
 frontend/npm-debug.log*
 frontend/package-lock.json
+
+ml/myenv/
