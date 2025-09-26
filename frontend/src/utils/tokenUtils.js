@@ -10,14 +10,14 @@ const getEnvVar = (key, defaultValue) => {
     if (typeof import.meta !== "undefined" && import.meta.env) {
       return import.meta.env[key] || defaultValue;
     }
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     // For Create React App (CRA)
     if (typeof process !== "undefined" && process.env) {
       return process.env[key] || defaultValue;
     }
-  } catch (_) {}
+  } catch (_) { }
 
   return defaultValue;
 };

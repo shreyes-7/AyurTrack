@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../Components/Layout";
 import Card from "../Components/Card";
 import { motion } from "framer-motion";
-import ExportData from "../Components/ExportData"; // Adjust path as needed
+import ExportData from "../Components/ExportData";
+import { getAuthHeaders } from "../utils/tokenUtils"; // Adjust path as needed
 import {
   Users,
   Activity,
@@ -180,28 +181,38 @@ export default function AdminDashboard() {
   // Mock data for admin functionality
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(`${BASE_URL}/users`);
-      const apiUsers = response.data; // raw backend users
+      const headers = await getAuthHeaders();
+      console.log("Auth Headers:", headers);
+      const response = await axios.get(`${BASE_URL}/users`, {
+        headers: headers,
+      });
+
+      // Fix: Access response.data.results instead of response.results
+      const apiUsers = response.data.results; // Access the results array correctly
 
       // Map backend users into mockUsers format
       const formattedUsers = apiUsers.map((u, i) => ({
-        id: i + 1,
+        id: u.id || i + 1, // Use actual ID from backend if available
         name: u.name,
         email: u.email,
         role: u.participantType || u.role,
         status: u.isBlockchainEnrolled ? "active" : "inactive",
-        joinDate: u.createdAt
-          ? new Date(u.createdAt).toISOString().split("T")[0]
+        joinDate: u.blockchainEnrollmentDate
+          ? new Date(u.blockchainEnrollmentDate).toISOString().split("T")[0]
           : "",
-        lastActive: u.updatedAt
-          ? new Date(u.updatedAt).toISOString().split("T")[0]
+        lastActive: u.blockchainEnrollmentDate
+          ? new Date(u.blockchainEnrollmentDate).toISOString().split("T")[0]
           : "",
-        activities: u.activitiesCount || 0,
+        activities: u.metrics?.totalBatchesHandled || 0, // Use actual metrics
+        contact: u.contact,
+        location: u.location?.address || "",
+        organization: u.fabricOrganization,
+        blockchainUserId: u.blockchainUserId,
+        certifications: u.certifications || [],
       }));
 
-      console.log("Fetched Users:", formattedUsers); // <-- log here
-
-      setUsers(formattedUsers); // set state
+      console.log("Fetched Users:", formattedUsers);
+      setUsers(formattedUsers);
     } catch (err) {
       console.error("Error fetching users:", err);
     }
