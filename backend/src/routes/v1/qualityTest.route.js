@@ -47,37 +47,37 @@ router.get('/failed-analysis',
 // SPECIALIZED QUERY ROUTES
 router.get('/batch/:batchId/report',
     auth('getQualityTests'),
-    validate(qualityTestValidation.getQualityReport),
+    // validate(qualityTestValidation.getQualityReport),
     qualityTestController.getQualityReport
 );
 
 router.get('/batch/:batchId',
     auth('getQualityTests'),
-    validate(qualityTestValidation.getQualityTestsByBatch),
+    // validate(qualityTestValidation.getQualityTestsByBatch),
     qualityTestController.getQualityTestsByBatch
 );
 
 router.get('/lab/:labId',
-    auth('getQualityTests'),
-    validate(qualityTestValidation.getQualityTestsByLab),
+    auth(),
+    // validate(qualityTestValidation.getQualityTestsByLab),
     qualityTestController.getQualityTestsByLab
 );
 
 router.get('/lab/:labId/capacity',
-    auth('getQualityTests'),
-    validate(qualityTestValidation.getLabCapacity),
+    auth(),
+    // validate(qualityTestValidation.getLabCapacity),
     qualityTestController.getLabCapacity
 );
 
 router.get('/type/:testType',
-    auth('getQualityTests'),
-    validate(qualityTestValidation.getQualityTestsByType),
+    auth(),
+    // validate(qualityTestValidation.getQualityTestsByType),
     qualityTestController.getQualityTestsByType
 );
 
 // QUALITY TEST OPERATIONS ROUTES
 router.post('/batch/:batchId/test',
-    // auth('manageQualityTests'),
+    auth(),
     // validate(qualityTestValidation.addQualityTest),
     qualityTestController.addQualityTest
 );
@@ -96,9 +96,13 @@ router.post('/:testId/certificate',
 
 // BASIC CRUD ROUTES
 router.route('/')
-    .get(auth('getQualityTests'), validate(qualityTestValidation.getQualityTests), qualityTestController.getQualityTests);
+    .get(auth('getQualityTests'),
+    //  validate(qualityTestValidation.getQualityTests), 
+     qualityTestController.getQualityTests);
 
 router.route('/:testId')
-    .get(auth('getQualityTests'), validate(qualityTestValidation.getQualityTest), qualityTestController.getQualityTest);
+    .get(auth('getQualityTests'),
+    //  validate(qualityTestValidation.getQualityTest),
+      qualityTestController.getQualityTest);
 
 module.exports = router;

@@ -246,14 +246,17 @@ export default function LabTesterPage() {
       if (formData.notes) results.notes = formData.notes;
 
       // Prepare data in the format expected by the chaincode
-      const submissionData = {
-        testId: formData.testId,
-        batchId: formData.batchId,
-        labId: labInfo.blockchainUserId,
-        testType: formData.testType,
-        results: JSON.stringify(results), // Chaincode expects results as JSON string
-        timestamp: formData.timestamp,
-      };
+      // Prepare data in the format expected by the chaincode
+// Prepare data in the format expected by the chaincode/service
+const submissionData = {
+  testId: formData.testId,
+  batchId: formData.batchId,
+  herbSpecies: formData.herbSpecies,  // <-- add this
+  labId: labInfo.blockchainUserId,
+  testType: formData.testType,
+  results: results,                   // <-- send as object, not string
+  timestamp: formData.timestamp,
+};
 
       const response = await axios.post(
         `${BASE_URL}/quality-tests/batch/${formData.batchId}/test`,

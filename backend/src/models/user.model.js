@@ -1,3 +1,4 @@
+// src/models/user.model.js - FIX CERTIFICATION DETAILS FIELD
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
@@ -53,19 +54,19 @@ const userSchema = mongoose.Schema(
     fabricOrganization: {
       type: String,
       default: 'FarmerOrg',
-      enum: ['FarmerOrg', 'ProcessorOrg', 'CollectorOrg', 'LabOrg', 'ManufacturerOrg' , 'AdminOrg']
+      enum: ['FarmerOrg', 'ProcessorOrg', 'CollectorOrg', 'LabOrg', 'ManufacturerOrg', 'AdminOrg'],
     },
     participantType: {
       type: String,
-      enum: ['farmer', 'processor', 'lab', 'manufacturer','admin'],
-      default: 'farmer'
+      enum: ['farmer', 'processor', 'lab', 'manufacturer', 'admin'],
+      default: 'farmer',
     },
     isBlockchainEnrolled: {
       type: Boolean,
       default: false,
     },
     blockchainEnrollmentDate: {
-      type: Date
+      type: Date,
     },
     // Location as latitude and longitude (required for blockchain)
     location: {
@@ -75,7 +76,7 @@ const userSchema = mongoose.Schema(
         min: -90,
         max: 90,
         validate: {
-          validator: function (value) {
+          validator: function(value) {
             return !isNaN(value) && isFinite(value);
           },
           message: 'Latitude must be a valid number between -90 and 90'
@@ -87,7 +88,7 @@ const userSchema = mongoose.Schema(
         min: -180,
         max: 180,
         validate: {
-          validator: function (value) {
+          validator: function(value) {
             return !isNaN(value) && isFinite(value);
           },
           message: 'Longitude must be a valid number between -180 and 180'
@@ -103,52 +104,70 @@ const userSchema = mongoose.Schema(
     contact: {
       type: String,
       trim: true,
-      required: true
+      required: true,
     },
-    certifications: [{
-      type: String,
-      trim: true
-    }],
+    certifications: {
+      type: [String], // ✅ FIXED: Array of strings instead of single string
+      trim: true,
+    },
     license: {
       type: String,
-      trim: true
+      trim: true,
+    },
+    // Enhanced blockchain integration
+    blockchainWallet: {
+      address: String,
+      privateKey: String, // Encrypted
+      publicKey: String,
+    },
+    // Supply chain specific fields
+    operationalCapacity: {
+      dailyCapacity: String,
+      storageCapacity: String,
+      processingTypes: [String], // ✅ FIXED: Array of strings
+    },
+    // ✅ FIXED: Certification tracking - proper schema structure
+    certificationDetails: [{
+      type: {
+        type: String,
+        trim: true
+      },
+      issuer: {
+        type: String,
+        trim: true
+      },
+      issueDate: {
+        type: Date
+      },
+      expiryDate: {
+        type: Date
+      },
+      certificateNumber: {
+        type: String,
+        trim: true
+      }
+    }],
+    // Performance metrics
+    metrics: {
+      totalBatchesHandled: {
+        type: Number,
+        default: 0
+      },
+      averageQualityScore: {
+        type: Number,
+        default: 0
+      },
+      complianceRate: {
+        type: Number,
+        default: 100
+      }
     }
   },
   {
     timestamps: true,
   }
 );
-userSchema.add({
-  // Enhanced blockchain integration
-  blockchainWallet: {
-    address: String,
-    privateKey: String, // Encrypted
-    publicKey: String
-  },
 
-  // Supply chain specific fields
-  operationalCapacity: {
-    dailyCapacity: String,
-    storageCapacity: String,
-    processingTypes: [String]
-  },
-
-  // Certification tracking
-  certificationDetails: [{
-    type: String,
-    issuer: String,
-    issueDate: Date,
-    expiryDate: Date,
-    certificateNumber: String
-  }],
-
-  // Performance metrics
-  metrics: {
-    totalBatchesHandled: { type: Number, default: 0 },
-    averageQualityScore: { type: Number, default: 0 },
-    complianceRate: { type: Number, default: 100 }
-  }
-});
 // Add existing plugins and methods
 userSchema.plugin(toJSON);
 userSchema.plugin(paginate);
@@ -176,15 +195,16 @@ userSchema.pre('save', async function (next) {
   if (user.isModified('password')) {
     user.password = await bcrypt.hash(user.password, 8);
   }
-
+  
   // Generate blockchain user ID if not exists
   if (!user.blockchainUserId && !user.isModified('blockchainUserId')) {
     const prefix = user.participantType ? user.participantType.charAt(0).toUpperCase() : 'U';
     user.blockchainUserId = `${prefix}${String(Date.now()).slice(-6)}${Math.random().toString(36).substr(2, 3).toUpperCase()}`;
   }
-
+  
   next();
 });
 
 const User = mongoose.model('User', userSchema);
+
 module.exports = User;
